@@ -23,10 +23,14 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  CardActions,
   FormControlLabel,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
-import type { Asignatura } from "./Asignaturas"
 
 interface DisponibilidadDia {
   dia: string
@@ -44,16 +48,23 @@ interface Profesor {
   disponibilidad: DisponibilidadDia[]
 }
 
-interface ProfesoresProps {
-  periodoId: number
-  profesores: Profesor[]
-  updateProfesores: (newProfesores: Profesor[]) => void
-  asignaturas: Asignatura[]
-}
-
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
-const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updateProfesores, asignaturas }) => {
+// Generar rangos de horas (igual que en GeneradorHorario)
+const horas = []
+let hora = 7
+let minutos = 0
+while (hora < 19 || (hora === 19 && minutos === 0)) {
+  horas.push(`${hora.toString().padStart(2, "0")}:${minutos.toString().padStart(2, "0")}`)
+  minutos += 45
+  if (minutos >= 60) {
+    hora++
+    minutos = minutos - 60
+  }
+}
+
+const Profesores: React.FC = () => {
+  const [profesores, setProfesores] = useState<Profesor[]>([])
   const [open, setOpen] = useState(false)
   const [editingProfesor, setEditingProfesor] = useState<Profesor | null>(null)
   const [newProfesor, setNewProfesor] = useState<Omit<Profesor, "id">>({
@@ -64,6 +75,9 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
     asignaturas: [],
     disponibilidad: [],
   })
+
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
   const handleOpen = () => {
     setEditingProfesor(null)
@@ -81,13 +95,16 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
   const handleClose = () => setOpen(false)
 
   const handleSave = () => {
+    if (!validarHoras()) {
+      alert("La hora de fin debe ser mayor que la hora de inicio en todos los días seleccionados.")
+      return
+    }
+
     if (editingProfesor) {
-      updateProfesores(
-        profesores.map((p) => (p.id === editingProfesor.id ? { ...editingProfesor, ...newProfesor } : p)),
-      )
+      setProfesores(profesores.map((p) => (p.id === editingProfesor.id ? { ...editingProfesor, ...newProfesor } : p)))
     } else {
       const profesorToAdd = { ...newProfesor, id: Date.now() }
-      updateProfesores([...profesores, profesorToAdd])
+      setProfesores([...profesores, profesorToAdd])
     }
     handleClose()
   }
@@ -99,7 +116,7 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
   }
 
   const handleDelete = (id: number) => {
-    updateProfesores(profesores.filter((p) => p.id !== id))
+    setProfesores(profesores.filter((p) => p.id !== id))
   }
 
   const handleDisponibilidadChange = (dia: string, checked: boolean) => {
@@ -119,7 +136,18 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
   const handleHoraChange = (dia: string, tipo: "horaInicio" | "horaFin", valor: string) => {
     setNewProfesor((prev) => ({
       ...prev,
-      disponibilidad: prev.disponibilidad.map((d) => (d.dia === dia ? { ...d, [tipo]: valor } : d)),
+      disponibilidad: prev.disponibilidad.map((d) => {
+        if (d.dia === dia) {
+          if (tipo === "horaInicio") {
+            // Si se cambia la hora de inicio, resetear la hora de fin
+            return { ...d, [tipo]: valor, horaFin: "" }
+          } else {
+            // Si se cambia la hora de fin, asegurarse de que sea mayor que la hora de inicio
+            return { ...d, [tipo]: valor }
+          }
+        }
+        return d
+      }),
     }))
   }
 
@@ -130,57 +158,83 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
     }))
   }
 
+  const validarHoras = (): boolean => {
+    return newProfesor.disponibilidad.every((d) => {
+      if (d.horaInicio && d.horaFin) {
+        return d.horaFin > d.horaInicio
+      }
+      return true // Si no hay horas seleccionadas, se considera válido
+    })
+  }
+
   return (
     <>
       <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
         Agregar Profesor
       </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Primer Nombre</TableCell>
-              <TableCell>Segundo Nombre</TableCell>
-              <TableCell>Número de Identificación</TableCell>
-              <TableCell>Fecha de Ingreso</TableCell>
-              <TableCell>Asignaturas</TableCell>
-              <TableCell>Disponibilidad</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {profesores.map((profesor) => (
-              <TableRow key={profesor.id}>
-                <TableCell>{profesor.primerNombre}</TableCell>
-                <TableCell>{profesor.segundoNombre}</TableCell>
-                <TableCell>{profesor.numeroIdentificacion}</TableCell>
-                <TableCell>{profesor.fechaIngreso}</TableCell>
-                <TableCell>
-                  {profesor.asignaturas.map((asignaturaId) => (
-                    <Chip
-                      key={asignaturaId}
-                      label={asignaturas.find((a) => a.id === asignaturaId)?.nombreAsignatura}
-                      sx={{ m: 0.5 }}
-                    />
-                  ))}
-                </TableCell>
-                <TableCell>
-                  {profesor.disponibilidad.map((d) => `${d.dia}: ${d.horaInicio}-${d.horaFin}`).join(", ")}
-                </TableCell>
-                <TableCell>
-                  <Button startIcon={<EditIcon />} onClick={() => handleEdit(profesor)}>
+      {isMobile ? (
+        <Grid container spacing={2}>
+          {profesores.map((profesor) => (
+            <Grid item xs={12} key={profesor.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{`${profesor.primerNombre} ${profesor.segundoNombre}`}</Typography>
+                  <Typography variant="body2">ID: {profesor.numeroIdentificacion}</Typography>
+                  <Typography variant="body2">Ingreso: {profesor.fechaIngreso}</Typography>
+                  <Typography variant="body2">
+                    Asignaturas: {profesor.asignaturas.map((a) => `Asignatura ${a}`).join(", ")}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(profesor)}>
                     Editar
                   </Button>
-                  <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(profesor.id)}>
+                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(profesor.id)}>
                     Eliminar
                   </Button>
-                </TableCell>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Número de Identificación</TableCell>
+                <TableCell>Fecha de Ingreso</TableCell>
+                <TableCell>Asignaturas</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+            </TableHead>
+            <TableBody>
+              {profesores.map((profesor) => (
+                <TableRow key={profesor.id}>
+                  <TableCell>{`${profesor.primerNombre} ${profesor.segundoNombre}`}</TableCell>
+                  <TableCell>{profesor.numeroIdentificacion}</TableCell>
+                  <TableCell>{profesor.fechaIngreso}</TableCell>
+                  <TableCell>
+                    {profesor.asignaturas.map((asignaturaId) => (
+                      <Chip key={asignaturaId} label={`Asignatura ${asignaturaId}`} sx={{ m: 0.5 }} />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(profesor)}>
+                      Editar
+                    </Button>
+                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(profesor.id)}>
+                      Eliminar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
         <DialogTitle>{editingProfesor ? "Editar Profesor" : "Agregar Nuevo Profesor"}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
@@ -237,14 +291,14 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       {(selected as number[]).map((value) => (
-                        <Chip key={value} label={asignaturas.find((a) => a.id === value)?.nombreAsignatura} />
+                        <Chip key={value} label={`Asignatura ${value}`} />
                       ))}
                     </Box>
                   )}
                 >
-                  {asignaturas.map((asignatura) => (
-                    <MenuItem key={asignatura.id} value={asignatura.id}>
-                      {asignatura.nombreAsignatura}
+                  {[1, 2, 3, 4, 5].map((id) => (
+                    <MenuItem key={id} value={id}>
+                      {`Asignatura ${id}`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -256,7 +310,7 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
           </Typography>
           <Grid container spacing={2}>
             {diasSemana.map((dia) => (
-              <Grid item xs={12} key={dia}>
+              <Grid item xs={12} sm={6} md={4} key={dia}>
                 <Paper elevation={2} sx={{ p: 2 }}>
                   <FormControlLabel
                     control={
@@ -269,24 +323,37 @@ const Profesores: React.FC<ProfesoresProps> = ({ periodoId, profesores, updatePr
                   />
                   {newProfesor.disponibilidad.some((d) => d.dia === dia) && (
                     <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
-                      <TextField
-                        label="Hora de inicio"
-                        type="time"
-                        value={newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaInicio || ""}
-                        onChange={(e) => handleHoraChange(dia, "horaInicio", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        inputProps={{ step: 300 }}
-                        sx={{ flexGrow: 1 }}
-                      />
-                      <TextField
-                        label="Hora de fin"
-                        type="time"
-                        value={newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaFin || ""}
-                        onChange={(e) => handleHoraChange(dia, "horaFin", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        inputProps={{ step: 300 }}
-                        sx={{ flexGrow: 1 }}
-                      />
+                      <FormControl fullWidth>
+                        <InputLabel>Hora de inicio</InputLabel>
+                        <Select
+                          value={newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaInicio || ""}
+                          onChange={(e) => handleHoraChange(dia, "horaInicio", e.target.value as string)}
+                        >
+                          {horas.map((hora) => (
+                            <MenuItem key={hora} value={hora}>
+                              {hora}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth>
+                        <InputLabel>Hora de fin</InputLabel>
+                        <Select
+                          value={newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaFin || ""}
+                          onChange={(e) => handleHoraChange(dia, "horaFin", e.target.value as string)}
+                        >
+                          {horas
+                            .filter(
+                              (hora) =>
+                                hora > (newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaInicio || ""),
+                            )
+                            .map((hora) => (
+                              <MenuItem key={hora} value={hora}>
+                                {hora}
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
                     </Box>
                   )}
                 </Paper>

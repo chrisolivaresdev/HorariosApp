@@ -18,34 +18,52 @@ import {
   Tab,
   Box,
   Typography,
+  useMediaQuery,
+  useTheme,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material"
 import { Add as AddIcon } from "@mui/icons-material"
-import Asignaturas from "./Asignaturas"
-import Profesores from "./Profesores"
 import Aulas from "./Aulas"
 import Secciones from "./Secciones"
-import Carreras from "./Carreras"
 
 interface Periodo {
   id: number
   nombre: string
   fechaInicio: string
   fechaFin: string
-  asignaturas: any[]
-  profesores: any[]
+  carrera: string
   aulas: any[]
   secciones: any[]
-  carreras: any[]
 }
 
 const Periodos: React.FC = () => {
   const [periodos, setPeriodos] = useState<Periodo[]>([])
   const [open, setOpen] = useState(false)
-  const [newPeriodo, setNewPeriodo] = useState<
-    Omit<Periodo, "id" | "asignaturas" | "profesores" | "aulas" | "secciones" | "carreras">
-  >({ nombre: "", fechaInicio: "", fechaFin: "" })
+  const [newPeriodo, setNewPeriodo] = useState<Omit<Periodo, "id" | "aulas" | "secciones">>({
+    nombre: "",
+    fechaInicio: "",
+    fechaFin: "",
+    carrera: "",
+  })
   const [selectedPeriodo, setSelectedPeriodo] = useState<Periodo | null>(null)
   const [tabValue, setTabValue] = useState(0)
+  const [carreras, setCarreras] = useState<string[]>([
+    "Ingeniería Informática",
+    "Ingeniería Civil",
+    "Administración de Empresas",
+    "Psicología",
+    "Medicina",
+  ])
+
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
   const handleOpen = () => setOpen(true)
   const handleClose = () => setOpen(false)
@@ -54,14 +72,11 @@ const Periodos: React.FC = () => {
     const periodoToAdd = {
       ...newPeriodo,
       id: Date.now(),
-      asignaturas: [],
-      profesores: [],
       aulas: [],
       secciones: [],
-      carreras: [],
     }
     setPeriodos([...periodos, periodoToAdd])
-    setNewPeriodo({ nombre: "", fechaInicio: "", fechaFin: "" })
+    setNewPeriodo({ nombre: "", fechaInicio: "", fechaFin: "", carrera: "" })
     handleClose()
     setSelectedPeriodo(periodoToAdd)
   }
@@ -83,131 +98,159 @@ const Periodos: React.FC = () => {
   }
 
   return (
-    <>
+    <Box sx={{ width: "100%" }}>
       <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
         Agregar Periodo
       </Button>
-      <TableContainer component={Paper} sx={{ mb: 4 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Fecha de Inicio</TableCell>
-              <TableCell>Fecha de Fin</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {periodos.map((periodo) => (
-              <TableRow key={periodo.id}>
-                <TableCell>{periodo.nombre}</TableCell>
-                <TableCell>{periodo.fechaInicio}</TableCell>
-                <TableCell>{periodo.fechaFin}</TableCell>
-                <TableCell>
-                  <Button onClick={() => handlePeriodoClick(periodo)} variant="outlined" color="primary">
+      {isMobile ? (
+        <Grid container spacing={2}>
+          {periodos.map((periodo) => (
+            <Grid item xs={12} key={periodo.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{periodo.nombre}</Typography>
+                  <Typography variant="body2">Inicio: {periodo.fechaInicio}</Typography>
+                  <Typography variant="body2">Fin: {periodo.fechaFin}</Typography>
+                  <Typography variant="body2">Carrera: {periodo.carrera}</Typography>
+                </CardContent>
+                <CardActions>
+                  <Button size="small" onClick={() => handlePeriodoClick(periodo)}>
                     Ver Detalles
                   </Button>
-                </TableCell>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <TableContainer component={Paper} sx={{ mb: 4, overflowX: "auto" }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Fecha de Inicio</TableCell>
+                <TableCell>Fecha de Fin</TableCell>
+                <TableCell>Carrera</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {periodos.map((periodo) => (
+                <TableRow key={periodo.id}>
+                  <TableCell>{periodo.nombre}</TableCell>
+                  <TableCell>{periodo.fechaInicio}</TableCell>
+                  <TableCell>{periodo.fechaFin}</TableCell>
+                  <TableCell>{periodo.carrera}</TableCell>
+                  <TableCell>
+                    <Button onClick={() => handlePeriodoClick(periodo)} variant="outlined" color="primary">
+                      Ver Detalles
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {selectedPeriodo && (
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", mt: 4 }}>
           <Typography variant="h5" gutterBottom>
             Detalles del Periodo: {selectedPeriodo.nombre}
           </Typography>
-          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs value={tabValue} onChange={handleTabChange} aria-label="periodo tabs">
-              <Tab label="Asignaturas" />
-              <Tab label="Profesores" />
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              aria-label="periodo tabs"
+              variant={isMobile ? "fullWidth" : "standard"}
+              orientation={isMobile ? "horizontal" : "horizontal"}
+            >
               <Tab label="Aulas" />
               <Tab label="Secciones" />
-              <Tab label="Carreras" />
             </Tabs>
           </Box>
           <Box sx={{ mt: 2 }}>
             {tabValue === 0 && (
-              <Asignaturas
-                periodoId={selectedPeriodo.id}
-                asignaturas={selectedPeriodo.asignaturas}
-                updateAsignaturas={(newAsignaturas) =>
-                  updatePeriodoData(selectedPeriodo.id, "asignaturas", newAsignaturas)
-                }
-              />
-            )}
-            {tabValue === 1 && (
-              <Profesores
-                periodoId={selectedPeriodo.id}
-                profesores={selectedPeriodo.profesores}
-                updateProfesores={(newProfesores) => updatePeriodoData(selectedPeriodo.id, "profesores", newProfesores)}
-                asignaturas={selectedPeriodo.asignaturas}
-              />
-            )}
-            {tabValue === 2 && (
               <Aulas
                 periodoId={selectedPeriodo.id}
                 aulas={selectedPeriodo.aulas}
                 updateAulas={(newAulas) => updatePeriodoData(selectedPeriodo.id, "aulas", newAulas)}
+                isMobile={isMobile}
               />
             )}
-            {tabValue === 3 && (
+            {tabValue === 1 && (
               <Secciones
                 periodoId={selectedPeriodo.id}
                 secciones={selectedPeriodo.secciones}
                 updateSecciones={(newSecciones) => updatePeriodoData(selectedPeriodo.id, "secciones", newSecciones)}
-              />
-            )}
-            {tabValue === 4 && (
-              <Carreras
-                periodoId={selectedPeriodo.id}
-                carreras={selectedPeriodo.carreras}
-                updateCarreras={(newCarreras) => updatePeriodoData(selectedPeriodo.id, "carreras", newCarreras)}
+                isMobile={isMobile}
               />
             )}
           </Box>
         </Box>
       )}
 
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Agregar Nuevo Periodo</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Nombre"
-            type="text"
-            fullWidth
-            value={newPeriodo.nombre}
-            onChange={(e) => setNewPeriodo({ ...newPeriodo, nombre: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Fecha de Inicio"
-            type="date"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={newPeriodo.fechaInicio}
-            onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaInicio: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Fecha de Fin"
-            type="date"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={newPeriodo.fechaFin}
-            onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaFin: e.target.value })}
-          />
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Nombre"
+                type="text"
+                fullWidth
+                value={newPeriodo.nombre}
+                onChange={(e) => setNewPeriodo({ ...newPeriodo, nombre: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                margin="dense"
+                label="Fecha de Inicio"
+                type="date"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                value={newPeriodo.fechaInicio}
+                onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaInicio: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                margin="dense"
+                label="Fecha de Fin"
+                type="date"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                value={newPeriodo.fechaFin}
+                onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaFin: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Carrera</InputLabel>
+                <Select
+                  value={newPeriodo.carrera}
+                  onChange={(e) => setNewPeriodo({ ...newPeriodo, carrera: e.target.value as string })}
+                >
+                  {carreras.map((carrera) => (
+                    <MenuItem key={carrera} value={carrera}>
+                      {carrera}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   )
 }
 

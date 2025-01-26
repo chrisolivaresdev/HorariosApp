@@ -18,8 +18,15 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  CardActions,
+  Box,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Schedule as ScheduleIcon } from "@mui/icons-material"
+import GeneradorHorario from "./GeneradorHorario"
 
 interface Seccion {
   id: number
@@ -33,11 +40,25 @@ interface SeccionesProps {
   periodoId: number
   secciones: Seccion[]
   updateSecciones: (newSecciones: Seccion[]) => void
+  isMobile: boolean
+  profesores?: any[]
+  materias?: any[]
+  aulas?: any[]
 }
 
-const Secciones: React.FC<SeccionesProps> = ({ periodoId, secciones, updateSecciones }) => {
+const Secciones: React.FC<SeccionesProps> = ({
+  periodoId,
+  secciones,
+  updateSecciones,
+  isMobile,
+  profesores = [],
+  materias = [],
+  aulas = [],
+}) => {
   const [open, setOpen] = useState(false)
+  const [openHorario, setOpenHorario] = useState(false)
   const [editingSeccion, setEditingSeccion] = useState<Seccion | null>(null)
+  const [selectedSeccion, setSelectedSeccion] = useState<Seccion | null>(null)
   const [newSeccion, setNewSeccion] = useState<Omit<Seccion, "id">>({
     nombreSeccion: "",
     totalEstudiantes: 0,
@@ -52,6 +73,16 @@ const Secciones: React.FC<SeccionesProps> = ({ periodoId, secciones, updateSecci
   }
 
   const handleClose = () => setOpen(false)
+
+  const handleOpenHorario = (seccion: Seccion) => {
+    setSelectedSeccion(seccion)
+    setOpenHorario(true)
+  }
+
+  const handleCloseHorario = () => {
+    setSelectedSeccion(null)
+    setOpenHorario(false)
+  }
 
   const handleSave = () => {
     if (editingSeccion) {
@@ -78,37 +109,70 @@ const Secciones: React.FC<SeccionesProps> = ({ periodoId, secciones, updateSecci
       <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
         Agregar Sección
       </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nombre de la Sección</TableCell>
-              <TableCell>Total de Estudiantes</TableCell>
-              <TableCell>Trayecto</TableCell>
-              <TableCell>Trimestre</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {secciones.map((seccion) => (
-              <TableRow key={seccion.id}>
-                <TableCell>{seccion.nombreSeccion}</TableCell>
-                <TableCell>{seccion.totalEstudiantes}</TableCell>
-                <TableCell>{seccion.trayecto}</TableCell>
-                <TableCell>{seccion.trimestre}</TableCell>
-                <TableCell>
-                  <Button startIcon={<EditIcon />} onClick={() => handleEdit(seccion)}>
+      {isMobile ? (
+        <Grid container spacing={2}>
+          {secciones.map((seccion) => (
+            <Grid item xs={12} key={seccion.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{seccion.nombreSeccion}</Typography>
+                  <Typography variant="body2">Estudiantes: {seccion.totalEstudiantes}</Typography>
+                  <Typography variant="body2">Trayecto: {seccion.trayecto}</Typography>
+                  <Typography variant="body2">Trimestre: {seccion.trimestre}</Typography>
+                </CardContent>
+                <CardActions>
+                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(seccion)}>
                     Editar
                   </Button>
-                  <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(seccion.id)}>
+                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(seccion.id)}>
                     Eliminar
                   </Button>
-                </TableCell>
+                  <Button size="small" startIcon={<ScheduleIcon />} onClick={() => handleOpenHorario(seccion)}>
+                    Generar Horario
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre de la Sección</TableCell>
+                <TableCell>Total de Estudiantes</TableCell>
+                <TableCell>Trayecto</TableCell>
+                <TableCell>Trimestre</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {secciones.map((seccion) => (
+                <TableRow key={seccion.id}>
+                  <TableCell>{seccion.nombreSeccion}</TableCell>
+                  <TableCell>{seccion.totalEstudiantes}</TableCell>
+                  <TableCell>{seccion.trayecto}</TableCell>
+                  <TableCell>{seccion.trimestre}</TableCell>
+                  <TableCell>
+                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(seccion)}>
+                      Editar
+                    </Button>
+                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(seccion.id)}>
+                      Eliminar
+                    </Button>
+                    <Button startIcon={<ScheduleIcon />} onClick={() => handleOpenHorario(seccion)}>
+                      Generar Horario
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Dialog para agregar/editar sección */}
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>{editingSeccion ? "Editar Sección" : "Agregar Nueva Sección"}</DialogTitle>
         <DialogContent>
@@ -127,13 +191,13 @@ const Secciones: React.FC<SeccionesProps> = ({ periodoId, secciones, updateSecci
             type="number"
             fullWidth
             value={newSeccion.totalEstudiantes}
-            onChange={(e) => setNewSeccion({ ...newSeccion, totalEstudiantes: Number.parseInt(e.target.value) })}
+            onChange={(e) => setNewSeccion({ ...newSeccion, totalEstudiantes: Number(e.target.value) })}
           />
           <FormControl fullWidth margin="dense">
             <InputLabel>Trayecto</InputLabel>
             <Select
               value={newSeccion.trayecto}
-              onChange={(e) => setNewSeccion({ ...newSeccion, trayecto: e.target.value as number })}
+              onChange={(e) => setNewSeccion({ ...newSeccion, trayecto: Number(e.target.value) })}
             >
               <MenuItem value={1}>1</MenuItem>
               <MenuItem value={2}>2</MenuItem>
@@ -145,7 +209,7 @@ const Secciones: React.FC<SeccionesProps> = ({ periodoId, secciones, updateSecci
             <InputLabel>Trimestre</InputLabel>
             <Select
               value={newSeccion.trimestre}
-              onChange={(e) => setNewSeccion({ ...newSeccion, trimestre: e.target.value as number })}
+              onChange={(e) => setNewSeccion({ ...newSeccion, trimestre: Number(e.target.value) })}
             >
               <MenuItem value={1}>1</MenuItem>
               <MenuItem value={2}>2</MenuItem>
@@ -156,6 +220,41 @@ const Secciones: React.FC<SeccionesProps> = ({ periodoId, secciones, updateSecci
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para el generador de horario */}
+      <Dialog
+        open={openHorario}
+        onClose={handleCloseHorario}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: "90vh",
+          },
+        }}
+      >
+        <DialogTitle>
+          Generar Horario - {selectedSeccion?.nombreSeccion}
+          <Typography variant="subtitle2" color="text.secondary">
+            Trayecto {selectedSeccion?.trayecto} - Trimestre {selectedSeccion?.trimestre}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {selectedSeccion && (
+              <GeneradorHorario
+                seccionId={selectedSeccion.id}
+                profesores={profesores}
+                materias={materias}
+                aulas={aulas}
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHorario}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </>

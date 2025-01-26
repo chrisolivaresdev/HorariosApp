@@ -18,6 +18,11 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  CardActions,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
 
@@ -32,9 +37,10 @@ interface AulasProps {
   periodoId: number
   aulas: Aula[]
   updateAulas: (newAulas: Aula[]) => void
+  isMobile: boolean
 }
 
-const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas }) => {
+const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }) => {
   const [open, setOpen] = useState(false)
   const [editingAula, setEditingAula] = useState<Aula | null>(null)
   const [newAula, setNewAula] = useState<Omit<Aula, "id">>({
@@ -76,36 +82,60 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas }) => {
       <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
         Agregar Aula
       </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nombre del Aula</TableCell>
-              <TableCell>Tipo de Aula</TableCell>
-              <TableCell>Capacidad Máxima</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {aulas.map((aula) => (
-              <TableRow key={aula.id}>
-                <TableCell>{aula.nombreAula}</TableCell>
-                <TableCell>{aula.tipoAula}</TableCell>
-                <TableCell>{aula.capacidadMaxima}</TableCell>
-                <TableCell>
-                  <Button startIcon={<EditIcon />} onClick={() => handleEdit(aula)}>
+      {isMobile ? (
+        <Grid container spacing={2}>
+          {aulas.map((aula) => (
+            <Grid item xs={12} key={aula.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{aula.nombreAula}</Typography>
+                  <Typography variant="body2">Tipo: {aula.tipoAula}</Typography>
+                  <Typography variant="body2">Capacidad: {aula.capacidadMaxima}</Typography>
+                </CardContent>
+                <CardActions>
+                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(aula)}>
                     Editar
                   </Button>
-                  <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(aula.id)}>
+                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(aula.id)}>
                     Eliminar
                   </Button>
-                </TableCell>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre del Aula</TableCell>
+                <TableCell>Tipo de Aula</TableCell>
+                <TableCell>Capacidad Máxima</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Dialog open={open} onClose={handleClose}>
+            </TableHead>
+            <TableBody>
+              {aulas.map((aula) => (
+                <TableRow key={aula.id}>
+                  <TableCell>{aula.nombreAula}</TableCell>
+                  <TableCell>{aula.tipoAula}</TableCell>
+                  <TableCell>{aula.capacidadMaxima}</TableCell>
+                  <TableCell>
+                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(aula)}>
+                      Editar
+                    </Button>
+                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(aula.id)}>
+                      Eliminar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>{editingAula ? "Editar Aula" : "Agregar Nueva Aula"}</DialogTitle>
         <DialogContent>
           <TextField
@@ -133,7 +163,7 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas }) => {
             type="number"
             fullWidth
             value={newAula.capacidadMaxima}
-            onChange={(e) => setNewAula({ ...newAula, capacidadMaxima: Number.parseInt(e.target.value) })}
+            onChange={(e) => setNewAula({ ...newAula, capacidadMaxima: Number(e.target.value) })}
           />
         </DialogContent>
         <DialogActions>
