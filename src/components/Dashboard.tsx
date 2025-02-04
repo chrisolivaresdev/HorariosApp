@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useContext } from "react"
 import {
   AppBar,
   Toolbar,
@@ -13,23 +13,35 @@ import {
   Container,
   useMediaQuery,
   useTheme,
+  Button,
 } from "@mui/material"
-import { Menu as MenuIcon, Home, Book, Person, School } from "@mui/icons-material"
+import { Menu as MenuIcon, Home, Book, Person, School, Brightness4, Brightness7, ExitToApp } from "@mui/icons-material"
 import { motion } from "framer-motion"
 import { Routes, Route, useNavigate } from "react-router-dom"
 import Periodos from "./Periodos"
 import Asignaturas from "./Asignaturas"
 import Profesores from "./Profesores"
 import Carreras from "./Carreras"
+import { ColorModeContext } from "../App"
 
-const Dashboard = () => {
+interface DashboardProps {
+  setIsAuthenticated: (value: boolean) => void
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
+  const colorMode = useContext(ColorModeContext)
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen)
+  }
+
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    navigate("/login")
   }
 
   const menuItems = [
@@ -49,6 +61,12 @@ const Dashboard = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Sistema de Horarios
           </Typography>
+          <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
+            {theme.palette.mode === "dark" ? <Brightness7 /> : <Brightness4 />}
+          </IconButton>
+          <Button color="inherit" onClick={handleLogout} startIcon={<ExitToApp />}>
+            Cerrar Sesión
+          </Button>
         </Toolbar>
       </AppBar>
       <Drawer
@@ -65,7 +83,7 @@ const Dashboard = () => {
           },
         }}
       >
-        <Toolbar /> {/* This pushes the list below the AppBar */}
+        <Toolbar />
         <List>
           {menuItems.map((item) => (
             <ListItem
@@ -99,7 +117,7 @@ const Dashboard = () => {
           p: 3,
         }}
       >
-        <Toolbar /> {/* This pushes the content below the AppBar */}
+        <Toolbar />
         <Container maxWidth="lg">
           <Routes>
             <Route path="/" element={<Periodos />} />
