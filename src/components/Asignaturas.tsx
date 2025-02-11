@@ -28,38 +28,37 @@ import {
   Chip,
   OutlinedInput,
   Box,
+  TablePagination,
+  InputAdornment,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
 export interface Asignatura {
   id: number
   nombreAsignatura: string
   tipoAsignatura: string
   duracionAsignatura: string
-  carrera: string
   trayecto: number
   trimestres: number[]
+  horasSemanales: number
 }
 
 const Asignaturas: React.FC = () => {
   const [asignaturas, setAsignaturas] = useState<Asignatura[]>([])
+  const [filteredAsignaturas, setFilteredAsignaturas] = useState<Asignatura[]>([])
   const [open, setOpen] = useState(false)
   const [editingAsignatura, setEditingAsignatura] = useState<Asignatura | null>(null)
   const [newAsignatura, setNewAsignatura] = useState<Omit<Asignatura, "id">>({
     nombreAsignatura: "",
     tipoAsignatura: "",
     duracionAsignatura: "",
-    carrera: "",
     trayecto: 1,
     trimestres: [],
+    horasSemanales: 0,
   })
-  const [carreras, setCarreras] = useState<string[]>([
-    "Ingeniería Informática",
-    "Ingeniería Civil",
-    "Administración de Empresas",
-    "Psicología",
-    "Medicina",
-  ])
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [searchTerm, setSearchTerm] = useState("")
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
@@ -74,15 +73,23 @@ const Asignaturas: React.FC = () => {
     }
   }, [newAsignatura])
 
+  useEffect(() => {
+    const filtered = asignaturas.filter((asignatura) =>
+      asignatura.nombreAsignatura.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    setFilteredAsignaturas(filtered)
+    setPage(0)
+  }, [searchTerm, asignaturas])
+
   const handleOpen = () => {
     setEditingAsignatura(null)
     setNewAsignatura({
       nombreAsignatura: "",
       tipoAsignatura: "",
       duracionAsignatura: "",
-      carrera: "",
       trayecto: 1,
       trimestres: [],
+      horasSemanales: 0,
     })
     setOpen(true)
   }
@@ -98,9 +105,7 @@ const Asignaturas: React.FC = () => {
       const asignaturaToAdd = { ...newAsignatura, id: Date.now() }
       setAsignaturas([...asignaturas, asignaturaToAdd])
     }
-    if (!carreras.includes(newAsignatura.carrera)) {
-      setCarreras([...carreras, newAsignatura.carrera])
-    }
+    console.log("Asignatura guardada:", editingAsignatura ? { ...editingAsignatura, ...newAsignatura } : newAsignatura)
     handleClose()
   }
 
@@ -130,25 +135,50 @@ const Asignaturas: React.FC = () => {
     })
   }
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(Number.parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
   return (
     <>
-      <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
-        Agregar Asignatura
-      </Button>
+      <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen}>
+          Agregar Asignatura
+        </Button>
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="Buscar por nombre"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
       {isMobile ? (
         <Grid container spacing={2}>
-          {asignaturas.map((asignatura) => (
+          {filteredAsignaturas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((asignatura) => (
             <Grid item xs={12} key={asignatura.id}>
               <Card>
                 <CardContent>
                   <Typography variant="h6">{asignatura.nombreAsignatura}</Typography>
                   <Typography variant="body2">Tipo: {asignatura.tipoAsignatura}</Typography>
                   <Typography variant="body2">Duración: {asignatura.duracionAsignatura}</Typography>
-                  <Typography variant="body2">Carrera: {asignatura.carrera}</Typography>
                   <Typography variant="body2">Trayecto: {asignatura.trayecto}</Typography>
                   <Typography variant="body2">
                     Trimestres: {asignatura.trimestres.map((t) => `${t}`).join(", ")}
                   </Typography>
+                  <Typography variant="body2">Horas Semanales: {asignatura.horasSemanales}</Typography>
                 </CardContent>
                 <CardActions>
                   <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(asignatura)}>
@@ -170,21 +200,21 @@ const Asignaturas: React.FC = () => {
                 <TableCell>Nombre</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell>Duración</TableCell>
-                <TableCell>Carrera</TableCell>
                 <TableCell>Trayecto</TableCell>
                 <TableCell>Trimestres</TableCell>
+                <TableCell>Horas Semanales</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {asignaturas.map((asignatura) => (
+              {filteredAsignaturas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((asignatura) => (
                 <TableRow key={asignatura.id}>
                   <TableCell>{asignatura.nombreAsignatura}</TableCell>
                   <TableCell>{asignatura.tipoAsignatura}</TableCell>
                   <TableCell>{asignatura.duracionAsignatura}</TableCell>
-                  <TableCell>{asignatura.carrera}</TableCell>
                   <TableCell>{asignatura.trayecto}</TableCell>
                   <TableCell>{asignatura.trimestres.map((t) => `${t}`).join(", ")}</TableCell>
+                  <TableCell>{asignatura.horasSemanales}</TableCell>
                   <TableCell>
                     <Button startIcon={<EditIcon />} onClick={() => handleEdit(asignatura)}>
                       Editar
@@ -199,6 +229,15 @@ const Asignaturas: React.FC = () => {
           </Table>
         </TableContainer>
       )}
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={filteredAsignaturas.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>{editingAsignatura ? "Editar Asignatura" : "Agregar Nueva Asignatura"}</DialogTitle>
         <DialogContent>
@@ -240,21 +279,6 @@ const Asignaturas: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth margin="dense">
-                <InputLabel>Carrera</InputLabel>
-                <Select
-                  value={newAsignatura.carrera}
-                  onChange={(e) => setNewAsignatura({ ...newAsignatura, carrera: e.target.value as string })}
-                >
-                  {carreras.map((carrera) => (
-                    <MenuItem key={carrera} value={carrera}>
-                      {carrera}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="dense">
                 <InputLabel>Trayecto</InputLabel>
@@ -268,6 +292,16 @@ const Asignaturas: React.FC = () => {
                   <MenuItem value={4}>4</MenuItem>
                 </Select>
               </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                margin="dense"
+                label="Horas Semanales"
+                type="number"
+                fullWidth
+                value={newAsignatura.horasSemanales}
+                onChange={(e) => setNewAsignatura({ ...newAsignatura, horasSemanales: Number(e.target.value) })}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="dense">

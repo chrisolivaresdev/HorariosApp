@@ -1,5 +1,5 @@
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Box,
   Button,
@@ -32,6 +32,7 @@ import {
   Delete as DeleteIcon,
   Warning as WarningIcon,
   Download as DownloadIcon,
+  Save as SaveIcon,
 } from "@mui/icons-material"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
@@ -45,16 +46,50 @@ interface Clase {
   horaInicio: string
   horaFin: string
   color?: string
+  horasAsignadas: number
+}
+
+interface Profesor {
+  id: number
+  nombre: string
+}
+
+interface Asignatura {
+  id: number
+  nombre: string
+  horasSemanales: number
+}
+
+interface Aula {
+  id: number
+  nombre: string
+  capacidad: number
 }
 
 interface GeneradorHorarioProps {
   seccionId: number
-  profesores: any[]
-  materias: any[]
-  aulas: any[]
 }
 
-const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesores, materias, aulas }) => {
+const profesoresPorDefecto: Profesor[] = [
+  { id: 1, nombre: "Juan Pérez" },
+  { id: 2, nombre: "María García" },
+  { id: 3, nombre: "Carlos Rodríguez" },
+]
+
+const asignaturasPorDefecto: Asignatura[] = [
+  { id: 1, nombre: "Matemáticas", horasSemanales: 6 },
+  { id: 2, nombre: "Física", horasSemanales: 4 },
+  { id: 3, nombre: "Química", horasSemanales: 4 },
+  { id: 4, nombre: "Historia", horasSemanales: 3 },
+]
+
+const aulasPorDefecto: Aula[] = [
+  { id: 1, nombre: "Aula 101", capacidad: 30 },
+  { id: 2, nombre: "Aula 102", capacidad: 25 },
+  { id: 3, nombre: "Laboratorio", capacidad: 20 },
+]
+
+const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId }) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("md"))
   const [open, setOpen] = useState(false)
@@ -69,10 +104,21 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
     dia: 0,
     horaInicio: "",
     horaFin: "",
+    horasAsignadas: 0,
   })
   const [isPrinting, setIsPrinting] = useState(false)
+  const [horasRestantes, setHorasRestantes] = useState<{ [key: string]: number }>({})
+  const [horasExtras, setHorasExtras] = useState<Omit<Clase, "id" | "materia" | "profesor" | "aula"> | null>(null)
 
   const horarioRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const horasInicialesRestantes: { [key: string]: number } = {}
+    asignaturasPorDefecto.forEach((asignatura) => {
+      horasInicialesRestantes[asignatura.nombre] = asignatura.horasSemanales
+    })
+    setHorasRestantes(horasInicialesRestantes)
+  }, [])
 
   // Generar rangos de horas
   const horas = []
@@ -98,13 +144,16 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
       dia: 0,
       horaInicio: "",
       horaFin: "",
+      horasAsignadas: 0,
     })
+    setHorasExtras(null)
     setOpen(true)
   }
 
   const handleClose = () => {
     setOpen(false)
     setEditingClase(null)
+    setHorasExtras(null)
   }
 
   const handleCloseWarning = () => {
@@ -120,12 +169,25 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
       dia: clase.dia,
       horaInicio: clase.horaInicio,
       horaFin: clase.horaFin,
+      horasAsignadas: clase.horasAsignadas,
     })
+    setHorasExtras(null)
     setOpen(true)
   }
 
   const handleDelete = (claseId: string) => {
+    const claseAEliminar = clases.find((clase) => clase.id === claseId)
+    if (claseAEliminar) {
+      setHorasRestantes((prev) => ({
+        ...prev,
+        [claseAEliminar.materia]: (prev[claseAEliminar.materia] || 0) + claseAEliminar.horasAsignadas,
+      }))
+    }
     setClases(clases.filter((clase) => clase.id !== claseId))
+  }
+
+  const checkOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+    return start1 < end2 && end1 > start2
   }
 
   const verificarSolapamiento = (nuevaClase: Omit<Clase, "id">, claseId?: string): boolean => {
@@ -133,11 +195,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
       if (claseId && clase.id === claseId) return false
       if (clase.dia !== nuevaClase.dia) return false
 
-      return (
-        (nuevaClase.horaInicio >= clase.horaInicio && nuevaClase.horaInicio < clase.horaFin) ||
-        (nuevaClase.horaFin > clase.horaInicio && nuevaClase.horaFin <= clase.horaFin) ||
-        (nuevaClase.horaInicio <= clase.horaInicio && nuevaClase.horaFin >= clase.horaFin)
-      )
+      return checkOverlap(nuevaClase.horaInicio, nuevaClase.horaFin, clase.horaInicio, clase.horaFin)
     })
   }
 
@@ -156,12 +214,54 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
       return
     }
 
+    // Check overlap with extra hours
+    if (horasExtras) {
+      const mainClassOverlap = checkOverlap(
+        nuevaClase.horaInicio,
+        nuevaClase.horaFin,
+        horasExtras.horaInicio,
+        horasExtras.horaFin,
+      )
+      const extraHoursOverlap = clases.some(
+        (clase) =>
+          clase.dia === horasExtras.dia &&
+          checkOverlap(clase.horaInicio, clase.horaFin, horasExtras.horaInicio, horasExtras.horaFin),
+      )
+
+      if (mainClassOverlap || extraHoursOverlap) {
+        setWarningMessage("Las horas extras se solapan con otras clases. Por favor, ajuste los horarios.")
+        setOpenWarning(true)
+        return
+      }
+    }
+
+    const horasAsignadas = calcularHorasAsignadas(nuevaClase.horaInicio, nuevaClase.horaFin)
+    const horasExtrasAsignadas = horasExtras ? calcularHorasAsignadas(horasExtras.horaInicio, horasExtras.horaFin) : 0
+    const totalHorasAsignadas = horasAsignadas + horasExtrasAsignadas
+    const horasDisponibles = horasRestantes[nuevaClase.materia] || 0
+
+    if (totalHorasAsignadas < horasDisponibles) {
+      setWarningMessage(
+        `Faltan ${horasDisponibles - totalHorasAsignadas} horas por asignar para ${nuevaClase.materia}.`,
+      )
+      setOpenWarning(true)
+      return
+    } else if (totalHorasAsignadas > horasDisponibles) {
+      setWarningMessage(
+        `Se han asignado ${totalHorasAsignadas - horasDisponibles} horas de más para ${nuevaClase.materia}.`,
+      )
+      setOpenWarning(true)
+      return
+    }
+
+    const nuevaClaseConHoras = { ...nuevaClase, horasAsignadas: totalHorasAsignadas }
+
     if (editingClase) {
       setClases(
         clases.map((clase) =>
           clase.id === editingClase.id
             ? {
-                ...nuevaClase,
+                ...nuevaClaseConHoras,
                 id: editingClase.id,
                 color: editingClase.color,
               }
@@ -173,13 +273,45 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
       setClases([
         ...clases,
         {
-          ...nuevaClase,
+          ...nuevaClaseConHoras,
           id: newId,
           color: generarColorAleatorio(),
         },
       ])
     }
+
+    // Agregar clase extra si existe
+    if (horasExtras) {
+      const newId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+      setClases((prevClases) => [
+        ...prevClases,
+        {
+          ...horasExtras,
+          id: newId,
+          profesor: nuevaClase.profesor,
+          materia: nuevaClase.materia,
+          aula: nuevaClase.aula,
+          color: generarColorAleatorio(),
+          horasAsignadas: calcularHorasAsignadas(horasExtras.horaInicio, horasExtras.horaFin),
+        },
+      ])
+    }
+
+    // Update remaining hours
+    setHorasRestantes((prev) => ({
+      ...prev,
+      [nuevaClaseConHoras.materia]: 0, // Todas las horas han sido asignadas
+    }))
+
+    console.log("Clase guardada:", nuevaClaseConHoras)
     handleClose()
+  }
+
+  const calcularHorasAsignadas = (horaInicio: string, horaFin: string) => {
+    const inicio = new Date(`2000-01-01T${horaInicio}:00`)
+    const fin = new Date(`2000-01-01T${horaFin}:00`)
+    const minutos = (fin.getTime() - inicio.getTime()) / (1000 * 60)
+    return minutos / 45 // Convertir minutos a horas de clase (45 minutos = 1 hora de clase)
   }
 
   const generarColorAleatorio = () => {
@@ -198,17 +330,20 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
   }
 
   const renderAccionesClase = (clase: Clase) => (
-    <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-      <Tooltip title="Editar">
-        <IconButton size="small" onClick={() => handleEdit(clase)}>
-          <EditIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Eliminar">
-        <IconButton size="small" onClick={() => handleDelete(clase.id)}>
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "flex-end" }}>
+      <Typography variant="caption">Horas restantes: {horasRestantes[clase.materia] || 0}</Typography>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <Tooltip title="Editar">
+          <IconButton size="small" onClick={() => handleEdit(clase)}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Eliminar">
+          <IconButton size="small" onClick={() => handleDelete(clase.id)}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   )
 
@@ -218,12 +353,11 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
       await new Promise((resolve) => setTimeout(resolve, 100)) // Espera para que se apliquen los cambios de estilo
 
       const canvas = await html2canvas(horarioRef.current, {
-        scale: 2, // Increase from 1.5 to 2 for better quality
+        scale: 2,
       })
       const imgData = canvas.toDataURL("image/png")
 
-      // Calcula las dimensiones para que el horario ocupe aproximadamente el 80% de la página
-      const imgWidth = 210 * 0.9 // A4 width in mm * 90%
+      const imgWidth = 210 * 0.9
       const imgHeight = (canvas.height * imgWidth) / canvas.width
 
       const pdf = new jsPDF({
@@ -232,7 +366,6 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
         format: "a4",
       })
 
-      // Centra la imagen en la página
       const xPosition = (pdf.internal.pageSize.width - imgWidth) / 2
       const yPosition = (pdf.internal.pageSize.height - imgHeight) / 2
 
@@ -241,6 +374,13 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
 
       setIsPrinting(false)
     }
+
+    // Mostrar todas las clases en la consola
+    console.log("Todas las clases agregadas:", clases)
+  }
+
+  const handleGuardarHorario = () => {
+    console.log("Horario guardado:", clases)
   }
 
   const printStyles = `
@@ -251,6 +391,12 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
     }
   `
 
+  const handleAddHorasExtras = () => {
+    if (!horasExtras) {
+      setHorasExtras({ dia: 0, horaInicio: "", horaFin: "", horasAsignadas: 0 })
+    }
+  }
+
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
       <style>{printStyles}</style>
@@ -260,6 +406,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
         </Button>
         <Button variant="contained" color="secondary" startIcon={<DownloadIcon />} onClick={handleDownloadPDF}>
           Descargar PDF
+        </Button>
+        <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleGuardarHorario}>
+          Guardar Horario
         </Button>
       </Box>
 
@@ -328,8 +477,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
                           key={`${dia}-${hora}`}
                           sx={{
                             backgroundColor: clase?.color,
-                            minWidth: "180px", // Increase from 150px
-                            height: "100px", // Increase from 80px
+                            minWidth: "180px",
+                            height: "100px",
                             borderLeft: "1px solid rgba(224, 224, 224, 1)",
                             ...(clase && {
                               borderBottom: "none",
@@ -374,9 +523,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
                   value={nuevaClase.materia}
                   onChange={(e) => setNuevaClase({ ...nuevaClase, materia: e.target.value as string })}
                 >
-                  {materias.map((materia: any) => (
-                    <MenuItem key={materia.id} value={materia.nombreAsignatura}>
-                      {materia.nombreAsignatura}
+                  {asignaturasPorDefecto.map((asignatura) => (
+                    <MenuItem key={asignatura.id} value={asignatura.nombre}>
+                      {asignatura.nombre}
                     </MenuItem>
                   ))}
                 </Select>
@@ -389,9 +538,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
                   value={nuevaClase.profesor}
                   onChange={(e) => setNuevaClase({ ...nuevaClase, profesor: e.target.value as string })}
                 >
-                  {profesores.map((profesor: any) => (
-                    <MenuItem key={profesor.id} value={`${profesor.primerNombre} ${profesor.segundoNombre}`}>
-                      {profesor.primerNombre} {profesor.segundoNombre}
+                  {profesoresPorDefecto.map((profesor) => (
+                    <MenuItem key={profesor.id} value={profesor.nombre}>
+                      {profesor.nombre}
                     </MenuItem>
                   ))}
                 </Select>
@@ -404,9 +553,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
                   value={nuevaClase.aula}
                   onChange={(e) => setNuevaClase({ ...nuevaClase, aula: e.target.value as string })}
                 >
-                  {aulas.map((aula: any) => (
-                    <MenuItem key={aula.id} value={aula.nombreAula}>
-                      {aula.nombreAula}
+                  {aulasPorDefecto.map((aula) => (
+                    <MenuItem key={aula.id} value={aula.nombre}>
+                      {aula.nombre}
                     </MenuItem>
                   ))}
                 </Select>
@@ -460,6 +609,69 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, profesor
               </FormControl>
             </Grid>
           </Grid>
+
+          {horasExtras && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Horas Extras
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Día</InputLabel>
+                    <Select
+                      value={horasExtras.dia}
+                      onChange={(e) => setHorasExtras({ ...horasExtras, dia: e.target.value as number })}
+                    >
+                      {dias.map((dia, idx) => (
+                        <MenuItem key={dia} value={idx}>
+                          {dia}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Hora de Inicio</InputLabel>
+                    <Select
+                      value={horasExtras.horaInicio}
+                      onChange={(e) => setHorasExtras({ ...horasExtras, horaInicio: e.target.value as string })}
+                    >
+                      {horas.map((hora) => (
+                        <MenuItem key={hora} value={hora}>
+                          {hora}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Hora de Finalización</InputLabel>
+                    <Select
+                      value={horasExtras.horaFin}
+                      onChange={(e) => setHorasExtras({ ...horasExtras, horaFin: e.target.value as string })}
+                    >
+                      {horas
+                        .filter((hora) => hora > horasExtras.horaInicio)
+                        .map((hora) => (
+                          <MenuItem key={hora} value={hora}>
+                            {hora}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {!horasExtras && (
+            <Button onClick={handleAddHorasExtras} sx={{ mt: 2 }}>
+              Agregar Horas Extras
+            </Button>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>

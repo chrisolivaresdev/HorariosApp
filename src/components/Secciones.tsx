@@ -1,5 +1,5 @@
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Button,
   Table,
@@ -24,8 +24,16 @@ import {
   Typography,
   CardActions,
   Box,
+  TablePagination,
+  InputAdornment,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Schedule as ScheduleIcon } from "@mui/icons-material"
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Schedule as ScheduleIcon,
+  Search as SearchIcon,
+} from "@mui/icons-material"
 import GeneradorHorario from "./GeneradorHorario"
 
 interface Seccion {
@@ -65,6 +73,18 @@ const Secciones: React.FC<SeccionesProps> = ({
     trayecto: 1,
     trimestre: 1,
   })
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filteredSecciones, setFilteredSecciones] = useState<Seccion[]>(secciones)
+
+  useEffect(() => {
+    const filtered = secciones.filter((seccion) =>
+      seccion.nombreSeccion.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    setFilteredSecciones(filtered)
+    setPage(0)
+  }, [searchTerm, secciones])
 
   const handleOpen = () => {
     setEditingSeccion(null)
@@ -104,14 +124,39 @@ const Secciones: React.FC<SeccionesProps> = ({
     updateSecciones(secciones.filter((s) => s.id !== id))
   }
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(Number.parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
   return (
     <>
-      <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
-        Agregar Sección
-      </Button>
+      <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen}>
+          Agregar Sección
+        </Button>
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="Buscar por nombre"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
       {isMobile ? (
         <Grid container spacing={2}>
-          {secciones.map((seccion) => (
+          {filteredSecciones.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((seccion) => (
             <Grid item xs={12} key={seccion.id}>
               <Card>
                 <CardContent>
@@ -148,7 +193,7 @@ const Secciones: React.FC<SeccionesProps> = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {secciones.map((seccion) => (
+              {filteredSecciones.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((seccion) => (
                 <TableRow key={seccion.id}>
                   <TableCell>{seccion.nombreSeccion}</TableCell>
                   <TableCell>{seccion.totalEstudiantes}</TableCell>
@@ -171,6 +216,15 @@ const Secciones: React.FC<SeccionesProps> = ({
           </Table>
         </TableContainer>
       )}
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={filteredSecciones.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
 
       {/* Dialog para agregar/editar sección */}
       <Dialog open={open} onClose={handleClose}>

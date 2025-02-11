@@ -1,5 +1,5 @@
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Button,
   Table,
@@ -23,8 +23,11 @@ import {
   CardContent,
   Typography,
   CardActions,
+  TablePagination,
+  InputAdornment,
+  Box,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
 interface Aula {
   id: number
@@ -48,6 +51,18 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
     tipoAula: "",
     capacidadMaxima: 0,
   })
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filteredAulas, setFilteredAulas] = useState<Aula[]>(aulas)
+
+  useEffect(() => {
+    const filtered = aulas.filter((aula) =>
+      aula.nombreAula.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    setFilteredAulas(filtered)
+    setPage(0)
+  }, [searchTerm, aulas])
 
   const handleOpen = () => {
     setEditingAula(null)
@@ -77,14 +92,39 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
     updateAulas(aulas.filter((a) => a.id !== id))
   }
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
   return (
     <>
-      <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
-        Agregar Aula
-      </Button>
+      <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen}>
+          Agregar Aula
+        </Button>
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="Buscar por nombre"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
       {isMobile ? (
         <Grid container spacing={2}>
-          {aulas.map((aula) => (
+          {filteredAulas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((aula) => (
             <Grid item xs={12} key={aula.id}>
               <Card>
                 <CardContent>
@@ -116,7 +156,7 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
               </TableRow>
             </TableHead>
             <TableBody>
-              {aulas.map((aula) => (
+              {filteredAulas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((aula) => (
                 <TableRow key={aula.id}>
                   <TableCell>{aula.nombreAula}</TableCell>
                   <TableCell>{aula.tipoAula}</TableCell>
@@ -135,6 +175,15 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
           </Table>
         </TableContainer>
       )}
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={filteredAulas.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>{editingAula ? "Editar Aula" : "Agregar Nueva Aula"}</DialogTitle>
         <DialogContent>
@@ -176,4 +225,3 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
 }
 
 export default Aulas
-

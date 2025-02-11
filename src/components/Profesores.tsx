@@ -1,5 +1,5 @@
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Button,
   Table,
@@ -29,8 +29,10 @@ import {
   CardContent,
   CardActions,
   FormControlLabel,
+  TablePagination,
+  InputAdornment,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
 interface DisponibilidadDia {
   dia: string
@@ -65,6 +67,7 @@ while (hora < 19 || (hora === 19 && minutos === 0)) {
 
 const Profesores: React.FC = () => {
   const [profesores, setProfesores] = useState<Profesor[]>([])
+  const [filteredProfesores, setFilteredProfesores] = useState<Profesor[]>([])
   const [open, setOpen] = useState(false)
   const [editingProfesor, setEditingProfesor] = useState<Profesor | null>(null)
   const [newProfesor, setNewProfesor] = useState<Omit<Profesor, "id">>({
@@ -75,9 +78,20 @@ const Profesores: React.FC = () => {
     asignaturas: [],
     disponibilidad: [],
   })
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [searchTerm, setSearchTerm] = useState("")
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
+
+  useEffect(() => {
+    const filtered = profesores.filter((profesor) =>
+      `${profesor.primerNombre} ${profesor.segundoNombre}`.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    setFilteredProfesores(filtered)
+    setPage(0)
+  }, [searchTerm, profesores])
 
   const handleOpen = () => {
     setEditingProfesor(null)
@@ -106,6 +120,7 @@ const Profesores: React.FC = () => {
       const profesorToAdd = { ...newProfesor, id: Date.now() }
       setProfesores([...profesores, profesorToAdd])
     }
+    console.log("Profesor guardado:", editingProfesor ? { ...editingProfesor, ...newProfesor } : newProfesor)
     handleClose()
   }
 
@@ -167,14 +182,39 @@ const Profesores: React.FC = () => {
     })
   }
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(Number.parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
   return (
     <>
-      <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
-        Agregar Profesor
-      </Button>
+      <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen}>
+          Agregar Profesor
+        </Button>
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="Buscar por nombre"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
       {isMobile ? (
         <Grid container spacing={2}>
-          {profesores.map((profesor) => (
+          {filteredProfesores.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((profesor) => (
             <Grid item xs={12} key={profesor.id}>
               <Card>
                 <CardContent>
@@ -210,7 +250,7 @@ const Profesores: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {profesores.map((profesor) => (
+              {filteredProfesores.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((profesor) => (
                 <TableRow key={profesor.id}>
                   <TableCell>{`${profesor.primerNombre} ${profesor.segundoNombre}`}</TableCell>
                   <TableCell>{profesor.numeroIdentificacion}</TableCell>
@@ -234,6 +274,15 @@ const Profesores: React.FC = () => {
           </Table>
         </TableContainer>
       )}
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={filteredProfesores.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
         <DialogTitle>{editingProfesor ? "Editar Profesor" : "Agregar Nuevo Profesor"}</DialogTitle>
         <DialogContent>
