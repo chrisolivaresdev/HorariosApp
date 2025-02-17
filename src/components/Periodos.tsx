@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import {
@@ -95,6 +97,7 @@ const Periodos: React.FC = () => {
     if (selectedPeriodo && selectedPeriodo.id === periodoId) {
       setSelectedPeriodo({ ...selectedPeriodo, [entityType]: newData })
     }
+    console.log(`${entityType} actualizado en periodo ${periodoId}:`, newData, `data del periodo`, selectedPeriodo)
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {

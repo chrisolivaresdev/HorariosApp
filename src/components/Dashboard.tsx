@@ -17,7 +17,7 @@ import {
 } from "@mui/material"
 import { Menu as MenuIcon, Home, Book, Person, School, Brightness4, Brightness7, ExitToApp } from "@mui/icons-material"
 import { motion } from "framer-motion"
-import { Routes, Route, useNavigate } from "react-router-dom"
+import { Routes, Route, useNavigate, Navigate } from "react-router-dom"
 import Periodos from "./Periodos"
 import Asignaturas from "./Asignaturas"
 import Profesores from "./Profesores"
@@ -48,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
     { text: "Periodos", icon: <Home />, path: "/" },
     { text: "Asignaturas", icon: <Book />, path: "/asignaturas" },
     { text: "Profesores", icon: <Person />, path: "/profesores" },
-    { text: "Carreras", icon: <School />, path: "/carreras" },
+    // { text: "Carreras", icon: <School />, path: "/carreras" },
   ]
 
   return (
@@ -123,7 +123,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
             <Route path="/" element={<Periodos />} />
             <Route path="/asignaturas" element={<Asignaturas />} />
             <Route path="/profesores" element={<Profesores />} />
-            <Route path="/carreras" element={<Carreras />} />
+            <Route path="*" element={<Navigate to="/" />} />
+
+            {/* <Route path="/carreras" element={<Carreras />} /> */}
           </Routes>
         </Container>
       </Box>

@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import {
@@ -31,6 +33,7 @@ import {
   FormControlLabel,
   TablePagination,
   InputAdornment,
+  FormHelperText,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
@@ -43,7 +46,7 @@ interface DisponibilidadDia {
 interface Profesor {
   id: number
   primerNombre: string
-  segundoNombre: string
+  apellido: string
   numeroIdentificacion: string
   fechaIngreso: string
   asignaturas: number[]
@@ -72,7 +75,7 @@ const Profesores: React.FC = () => {
   const [editingProfesor, setEditingProfesor] = useState<Profesor | null>(null)
   const [newProfesor, setNewProfesor] = useState<Omit<Profesor, "id">>({
     primerNombre: "",
-    segundoNombre: "",
+    apellido: "",
     numeroIdentificacion: "",
     fechaIngreso: "",
     asignaturas: [],
@@ -81,13 +84,14 @@ const Profesores: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
   useEffect(() => {
     const filtered = profesores.filter((profesor) =>
-      `${profesor.primerNombre} ${profesor.segundoNombre}`.toLowerCase().includes(searchTerm.toLowerCase()),
+      `${profesor.primerNombre} ${profesor.apellido}`.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     setFilteredProfesores(filtered)
     setPage(0)
@@ -97,31 +101,55 @@ const Profesores: React.FC = () => {
     setEditingProfesor(null)
     setNewProfesor({
       primerNombre: "",
-      segundoNombre: "",
+      apellido: "",
       numeroIdentificacion: "",
       fechaIngreso: "",
       asignaturas: [],
       disponibilidad: [],
     })
+    setErrors({})
     setOpen(true)
   }
 
-  const handleClose = () => setOpen(false)
+  const handleClose = () => {
+    setOpen(false)
+    setErrors({})
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {}
+
+    if (!newProfesor.primerNombre) newErrors.primerNombre = "El nombre es requerido"
+    if (!newProfesor.apellido) newErrors.apellido = "El apellido es requerido"
+    if (!newProfesor.numeroIdentificacion) newErrors.numeroIdentificacion = "El número de identificación es requerido"
+    if (!newProfesor.fechaIngreso) newErrors.fechaIngreso = "La fecha de ingreso es requerida"
+    if (newProfesor.asignaturas.length === 0) newErrors.asignaturas = "Debe seleccionar al menos una asignatura"
+    if (newProfesor.disponibilidad.length === 0)
+      newErrors.disponibilidad = "Debe seleccionar al menos un día de disponibilidad"
+
+    newProfesor.disponibilidad.forEach((d) => {
+      if (!d.horaInicio || !d.horaFin) {
+        newErrors[`disponibilidad_${d.dia}`] = "Debe seleccionar hora de inicio y fin"
+      } else if (d.horaFin <= d.horaInicio) {
+        newErrors[`disponibilidad_${d.dia}`] = "La hora de fin debe ser mayor que la hora de inicio"
+      }
+    })
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSave = () => {
-    if (!validarHoras()) {
-      alert("La hora de fin debe ser mayor que la hora de inicio en todos los días seleccionados.")
-      return
+    if (validateForm()) {
+      if (editingProfesor) {
+        setProfesores(profesores.map((p) => (p.id === editingProfesor.id ? { ...editingProfesor, ...newProfesor } : p)))
+      } else {
+        const profesorToAdd = { ...newProfesor, id: Date.now() }
+        setProfesores([...profesores, profesorToAdd])
+      }
+      console.log("Profesor guardado:", editingProfesor ? { ...editingProfesor, ...newProfesor } : newProfesor)
+      handleClose()
     }
-
-    if (editingProfesor) {
-      setProfesores(profesores.map((p) => (p.id === editingProfesor.id ? { ...editingProfesor, ...newProfesor } : p)))
-    } else {
-      const profesorToAdd = { ...newProfesor, id: Date.now() }
-      setProfesores([...profesores, profesorToAdd])
-    }
-    console.log("Profesor guardado:", editingProfesor ? { ...editingProfesor, ...newProfesor } : newProfesor)
-    handleClose()
   }
 
   const handleEdit = (profesor: Profesor) => {
@@ -146,6 +174,7 @@ const Profesores: React.FC = () => {
         disponibilidad: prev.disponibilidad.filter((d) => d.dia !== dia),
       }))
     }
+    setErrors((prev) => ({ ...prev, disponibilidad: "" }))
   }
 
   const handleHoraChange = (dia: string, tipo: "horaInicio" | "horaFin", valor: string) => {
@@ -154,16 +183,15 @@ const Profesores: React.FC = () => {
       disponibilidad: prev.disponibilidad.map((d) => {
         if (d.dia === dia) {
           if (tipo === "horaInicio") {
-            // Si se cambia la hora de inicio, resetear la hora de fin
             return { ...d, [tipo]: valor, horaFin: "" }
           } else {
-            // Si se cambia la hora de fin, asegurarse de que sea mayor que la hora de inicio
             return { ...d, [tipo]: valor }
           }
         }
         return d
       }),
     }))
+    setErrors((prev) => ({ ...prev, [`disponibilidad_${dia}`]: "" }))
   }
 
   const handleAsignaturasChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -171,15 +199,7 @@ const Profesores: React.FC = () => {
       ...prev,
       asignaturas: event.target.value as number[],
     }))
-  }
-
-  const validarHoras = (): boolean => {
-    return newProfesor.disponibilidad.every((d) => {
-      if (d.horaInicio && d.horaFin) {
-        return d.horaFin > d.horaInicio
-      }
-      return true // Si no hay horas seleccionadas, se considera válido
-    })
+    setErrors((prev) => ({ ...prev, asignaturas: "" }))
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -218,7 +238,7 @@ const Profesores: React.FC = () => {
             <Grid item xs={12} key={profesor.id}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6">{`${profesor.primerNombre} ${profesor.segundoNombre}`}</Typography>
+                  <Typography variant="h6">{`${profesor.primerNombre} ${profesor.apellido}`}</Typography>
                   <Typography variant="body2">ID: {profesor.numeroIdentificacion}</Typography>
                   <Typography variant="body2">Ingreso: {profesor.fechaIngreso}</Typography>
                   <Typography variant="body2">
@@ -252,7 +272,7 @@ const Profesores: React.FC = () => {
             <TableBody>
               {filteredProfesores.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((profesor) => (
                 <TableRow key={profesor.id}>
-                  <TableCell>{`${profesor.primerNombre} ${profesor.segundoNombre}`}</TableCell>
+                  <TableCell>{`${profesor.primerNombre} ${profesor.apellido}`}</TableCell>
                   <TableCell>{profesor.numeroIdentificacion}</TableCell>
                   <TableCell>{profesor.fechaIngreso}</TableCell>
                   <TableCell>
@@ -291,21 +311,31 @@ const Profesores: React.FC = () => {
               <TextField
                 autoFocus
                 margin="dense"
-                label="Primer Nombre"
+                label="Nombre"
                 type="text"
                 fullWidth
                 value={newProfesor.primerNombre}
-                onChange={(e) => setNewProfesor({ ...newProfesor, primerNombre: e.target.value })}
+                onChange={(e) => {
+                  setNewProfesor({ ...newProfesor, primerNombre: e.target.value })
+                  setErrors((prev) => ({ ...prev, primerNombre: "" }))
+                }}
+                error={!!errors.primerNombre}
+                helperText={errors.primerNombre}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 margin="dense"
-                label="Segundo Nombre"
+                label="Apellido"
                 type="text"
                 fullWidth
-                value={newProfesor.segundoNombre}
-                onChange={(e) => setNewProfesor({ ...newProfesor, segundoNombre: e.target.value })}
+                value={newProfesor.apellido}
+                onChange={(e) => {
+                  setNewProfesor({ ...newProfesor, apellido: e.target.value })
+                  setErrors((prev) => ({ ...prev, apellido: "" }))
+                }}
+                error={!!errors.apellido}
+                helperText={errors.apellido}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -315,7 +345,12 @@ const Profesores: React.FC = () => {
                 type="text"
                 fullWidth
                 value={newProfesor.numeroIdentificacion}
-                onChange={(e) => setNewProfesor({ ...newProfesor, numeroIdentificacion: e.target.value })}
+                onChange={(e) => {
+                  setNewProfesor({ ...newProfesor, numeroIdentificacion: e.target.value })
+                  setErrors((prev) => ({ ...prev, numeroIdentificacion: "" }))
+                }}
+                error={!!errors.numeroIdentificacion}
+                helperText={errors.numeroIdentificacion}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -326,11 +361,16 @@ const Profesores: React.FC = () => {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
                 value={newProfesor.fechaIngreso}
-                onChange={(e) => setNewProfesor({ ...newProfesor, fechaIngreso: e.target.value })}
+                onChange={(e) => {
+                  setNewProfesor({ ...newProfesor, fechaIngreso: e.target.value })
+                  setErrors((prev) => ({ ...prev, fechaIngreso: "" }))
+                }}
+                error={!!errors.fechaIngreso}
+                helperText={errors.fechaIngreso}
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="dense">
+              <FormControl fullWidth margin="dense" error={!!errors.asignaturas}>
                 <InputLabel id="asignaturas-label">Asignaturas</InputLabel>
                 <Select
                   labelId="asignaturas-label"
@@ -351,12 +391,16 @@ const Profesores: React.FC = () => {
                     </MenuItem>
                   ))}
                 </Select>
+                {errors.asignaturas && <FormHelperText>{errors.asignaturas}</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
             Disponibilidad
           </Typography>
+          {errors.disponibilidad && (
+            <FormHelperText error>{errors.disponibilidad}</FormHelperText>
+          )}
           <Grid container spacing={2}>
             {diasSemana.map((dia) => (
               <Grid item xs={12} sm={6} md={4} key={dia}>
@@ -372,7 +416,7 @@ const Profesores: React.FC = () => {
                   />
                   {newProfesor.disponibilidad.some((d) => d.dia === dia) && (
                     <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
-                      <FormControl fullWidth>
+                      <FormControl fullWidth error={!!errors[`disponibilidad_${dia}`]}>
                         <InputLabel>Hora de inicio</InputLabel>
                         <Select
                           value={newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaInicio || ""}
@@ -385,7 +429,7 @@ const Profesores: React.FC = () => {
                           ))}
                         </Select>
                       </FormControl>
-                      <FormControl fullWidth>
+                      <FormControl fullWidth error={!!errors[`disponibilidad_${dia}`]}>
                         <InputLabel>Hora de fin</InputLabel>
                         <Select
                           value={newProfesor.disponibilidad.find((d) => d.dia === dia)?.horaFin || ""}
@@ -404,6 +448,9 @@ const Profesores: React.FC = () => {
                         </Select>
                       </FormControl>
                     </Box>
+                  )}
+                  {errors[`disponibilidad_${dia}`] && (
+                    <FormHelperText error>{errors[`disponibilidad_${dia}`]}</FormHelperText>
                   )}
                 </Paper>
               </Grid>

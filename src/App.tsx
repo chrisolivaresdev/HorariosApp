@@ -9,7 +9,7 @@ import Dashboard from "./components/Dashboard"
 export const ColorModeContext = React.createContext({ toggleColorMode: () => {} })
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [mode, setMode] = useState<"light" | "dark">("light")
 
   const colorMode = useMemo(

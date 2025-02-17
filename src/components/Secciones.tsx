@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import {
@@ -26,6 +28,7 @@ import {
   Box,
   TablePagination,
   InputAdornment,
+  FormHelperText,
 } from "@mui/material"
 import {
   Add as AddIcon,
@@ -77,6 +80,7 @@ const Secciones: React.FC<SeccionesProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredSecciones, setFilteredSecciones] = useState<Seccion[]>(secciones)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     const filtered = secciones.filter((seccion) =>
@@ -89,10 +93,14 @@ const Secciones: React.FC<SeccionesProps> = ({
   const handleOpen = () => {
     setEditingSeccion(null)
     setNewSeccion({ nombreSeccion: "", totalEstudiantes: 0, trayecto: 1, trimestre: 1 })
+    setErrors({})
     setOpen(true)
   }
 
-  const handleClose = () => setOpen(false)
+  const handleClose = () => {
+    setOpen(false)
+    setErrors({})
+  }
 
   const handleOpenHorario = (seccion: Seccion) => {
     setSelectedSeccion(seccion)
@@ -104,19 +112,40 @@ const Secciones: React.FC<SeccionesProps> = ({
     setOpenHorario(false)
   }
 
-  const handleSave = () => {
-    if (editingSeccion) {
-      updateSecciones(secciones.map((s) => (s.id === editingSeccion.id ? { ...editingSeccion, ...newSeccion } : s)))
-    } else {
-      const seccionToAdd = { ...newSeccion, id: Date.now() }
-      updateSecciones([...secciones, seccionToAdd])
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {}
+    if (!newSeccion.nombreSeccion) newErrors.nombreSeccion = "El nombre de la sección es requerido"
+    if (!newSeccion.totalEstudiantes || newSeccion.totalEstudiantes <= 0) {
+      newErrors.totalEstudiantes = "El total de estudiantes debe ser mayor que 0"
     }
-    handleClose()
+    if (newSeccion.trayecto === undefined) newErrors.trayecto = "El trayecto es requerido"
+    if (newSeccion.trimestre === undefined) newErrors.trimestre = "El trimestre es requerido"
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSave = () => {
+    if (validateForm()) {
+      if (editingSeccion) {
+        const updatedSecciones = secciones.map((s) =>
+          s.id === editingSeccion.id ? { ...editingSeccion, ...newSeccion } : s,
+        )
+        updateSecciones(updatedSecciones)
+        console.log(`Sección actualizada en periodo ${periodoId}:`, { ...editingSeccion, ...newSeccion })
+      } else {
+        const seccionToAdd = { ...newSeccion, id: Date.now() }
+        const updatedSecciones = [...secciones, seccionToAdd]
+        updateSecciones(updatedSecciones)
+        console.log(`Nueva sección agregada en periodo ${periodoId}:`, seccionToAdd)
+      }
+      handleClose()
+    }
   }
 
   const handleEdit = (seccion: Seccion) => {
     setEditingSeccion(seccion)
     setNewSeccion({ ...seccion })
+    setErrors({})
     setOpen(true)
   }
 
@@ -131,6 +160,16 @@ const Secciones: React.FC<SeccionesProps> = ({
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(Number.parseInt(event.target.value, 10))
     setPage(0)
+  }
+
+  const handleTrayectoChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    const trayectoValue = event.target.value as number
+    setNewSeccion((prev) => ({
+      ...prev,
+      trayecto: trayectoValue,
+      trimestre: trayectoValue === 0 ? 1 : prev.trimestre,
+    }))
+    setErrors((prev) => ({ ...prev, trayecto: "" }))
   }
 
   return (
@@ -162,7 +201,9 @@ const Secciones: React.FC<SeccionesProps> = ({
                 <CardContent>
                   <Typography variant="h6">{seccion.nombreSeccion}</Typography>
                   <Typography variant="body2">Estudiantes: {seccion.totalEstudiantes}</Typography>
-                  <Typography variant="body2">Trayecto: {seccion.trayecto}</Typography>
+                  <Typography variant="body2">
+                    Trayecto: {seccion.trayecto === 0 ? "Inicial" : seccion.trayecto}
+                  </Typography>
                   <Typography variant="body2">Trimestre: {seccion.trimestre}</Typography>
                 </CardContent>
                 <CardActions>
@@ -197,7 +238,7 @@ const Secciones: React.FC<SeccionesProps> = ({
                 <TableRow key={seccion.id}>
                   <TableCell>{seccion.nombreSeccion}</TableCell>
                   <TableCell>{seccion.totalEstudiantes}</TableCell>
-                  <TableCell>{seccion.trayecto}</TableCell>
+                  <TableCell>{seccion.trayecto === 0 ? "Inicial" : seccion.trayecto}</TableCell>
                   <TableCell>{seccion.trimestre}</TableCell>
                   <TableCell>
                     <Button startIcon={<EditIcon />} onClick={() => handleEdit(seccion)}>
@@ -237,7 +278,12 @@ const Secciones: React.FC<SeccionesProps> = ({
             type="text"
             fullWidth
             value={newSeccion.nombreSeccion}
-            onChange={(e) => setNewSeccion({ ...newSeccion, nombreSeccion: e.target.value })}
+            onChange={(e) => {
+              setNewSeccion({ ...newSeccion, nombreSeccion: e.target.value })
+              setErrors({ ...errors, nombreSeccion: "" })
+            }}
+            error={!!errors.nombreSeccion}
+            helperText={errors.nombreSeccion}
           />
           <TextField
             margin="dense"
@@ -245,30 +291,40 @@ const Secciones: React.FC<SeccionesProps> = ({
             type="number"
             fullWidth
             value={newSeccion.totalEstudiantes}
-            onChange={(e) => setNewSeccion({ ...newSeccion, totalEstudiantes: Number(e.target.value) })}
+            onChange={(e) => {
+              setNewSeccion({ ...newSeccion, totalEstudiantes: Number(e.target.value) })
+              setErrors({ ...errors, totalEstudiantes: "" })
+            }}
+            error={!!errors.totalEstudiantes}
+            helperText={errors.totalEstudiantes}
           />
-          <FormControl fullWidth margin="dense">
+          <FormControl fullWidth margin="dense" error={!!errors.trayecto}>
             <InputLabel>Trayecto</InputLabel>
-            <Select
-              value={newSeccion.trayecto}
-              onChange={(e) => setNewSeccion({ ...newSeccion, trayecto: Number(e.target.value) })}
-            >
+            <Select value={newSeccion.trayecto} onChange={handleTrayectoChange}>
+              <MenuItem value={0}>Inicial</MenuItem>
               <MenuItem value={1}>1</MenuItem>
               <MenuItem value={2}>2</MenuItem>
-              <MenuItem value={3}>3</MenuItem>
-              <MenuItem value={4}>4</MenuItem>
+              <MenuItem value={3}>Prosecución</MenuItem>
+              <MenuItem value={4}>3</MenuItem>
+              <MenuItem value={5}>4</MenuItem>
             </Select>
+            {errors.trayecto && <FormHelperText>{errors.trayecto}</FormHelperText>}
           </FormControl>
-          <FormControl fullWidth margin="dense">
+          <FormControl fullWidth margin="dense" error={!!errors.trimestre}>
             <InputLabel>Trimestre</InputLabel>
             <Select
               value={newSeccion.trimestre}
-              onChange={(e) => setNewSeccion({ ...newSeccion, trimestre: Number(e.target.value) })}
+              onChange={(e) => {
+                setNewSeccion({ ...newSeccion, trimestre: Number(e.target.value) })
+                setErrors({ ...errors, trimestre: "" })
+              }}
+              disabled={newSeccion.trayecto === 0}
             >
               <MenuItem value={1}>1</MenuItem>
               <MenuItem value={2}>2</MenuItem>
               <MenuItem value={3}>3</MenuItem>
             </Select>
+            {errors.trimestre && <FormHelperText>{errors.trimestre}</FormHelperText>}
           </FormControl>
         </DialogContent>
         <DialogActions>
@@ -292,7 +348,8 @@ const Secciones: React.FC<SeccionesProps> = ({
         <DialogTitle>
           Generar Horario - {selectedSeccion?.nombreSeccion}
           <Typography variant="subtitle2" color="text.secondary">
-            Trayecto {selectedSeccion?.trayecto} - Trimestre {selectedSeccion?.trimestre}
+            Trayecto {selectedSeccion?.trayecto === 0 ? "Inicial" : selectedSeccion?.trayecto} - Trimestre{" "}
+            {selectedSeccion?.trimestre}
           </Typography>
         </DialogTitle>
         <DialogContent>

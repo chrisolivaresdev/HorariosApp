@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import {
@@ -26,6 +28,7 @@ import {
   TablePagination,
   InputAdornment,
   Box,
+  FormHelperText,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
@@ -55,11 +58,10 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredAulas, setFilteredAulas] = useState<Aula[]>(aulas)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
-    const filtered = aulas.filter((aula) =>
-      aula.nombreAula.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filtered = aulas.filter((aula) => aula.nombreAula.toLowerCase().includes(searchTerm.toLowerCase()))
     setFilteredAulas(filtered)
     setPage(0)
   }, [searchTerm, aulas])
@@ -67,24 +69,46 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
   const handleOpen = () => {
     setEditingAula(null)
     setNewAula({ nombreAula: "", tipoAula: "", capacidadMaxima: 0 })
+    setErrors({})
     setOpen(true)
   }
 
-  const handleClose = () => setOpen(false)
+  const handleClose = () => {
+    setOpen(false)
+    setErrors({})
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {}
+    if (!newAula.nombreAula) newErrors.nombreAula = "El nombre del aula es requerido"
+    if (!newAula.tipoAula) newErrors.tipoAula = "El tipo de aula es requerido"
+    if (!newAula.capacidadMaxima || newAula.capacidadMaxima <= 0) {
+      newErrors.capacidadMaxima = "La capacidad máxima debe ser mayor que 0"
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSave = () => {
-    if (editingAula) {
-      updateAulas(aulas.map((a) => (a.id === editingAula.id ? { ...editingAula, ...newAula } : a)))
-    } else {
-      const aulaToAdd = { ...newAula, id: Date.now() }
-      updateAulas([...aulas, aulaToAdd])
+    if (validateForm()) {
+      if (editingAula) {
+        const updatedAulas = aulas.map((a) => (a.id === editingAula.id ? { ...editingAula, ...newAula } : a))
+        updateAulas(updatedAulas)
+        console.log(`Aula actualizada en periodo ${periodoId}:`, { ...editingAula, ...newAula })
+      } else {
+        const aulaToAdd = { ...newAula, id: Date.now() }
+        const updatedAulas = [...aulas, aulaToAdd]
+        updateAulas(updatedAulas)
+        console.log(`Nueva aula agregada en periodo ${periodoId}:`, aulaToAdd)
+      }
+      handleClose()
     }
-    handleClose()
   }
 
   const handleEdit = (aula: Aula) => {
     setEditingAula(aula)
     setNewAula({ ...aula })
+    setErrors({})
     setOpen(true)
   }
 
@@ -97,7 +121,7 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
   }
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10))
+    setRowsPerPage(Number.parseInt(event.target.value, 10))
     setPage(0)
   }
 
@@ -194,17 +218,26 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
             type="text"
             fullWidth
             value={newAula.nombreAula}
-            onChange={(e) => setNewAula({ ...newAula, nombreAula: e.target.value })}
+            onChange={(e) => {
+              setNewAula({ ...newAula, nombreAula: e.target.value })
+              setErrors({ ...errors, nombreAula: "" })
+            }}
+            error={!!errors.nombreAula}
+            helperText={errors.nombreAula}
           />
-          <FormControl fullWidth margin="dense">
+          <FormControl fullWidth margin="dense" error={!!errors.tipoAula}>
             <InputLabel>Tipo de Aula</InputLabel>
             <Select
               value={newAula.tipoAula}
-              onChange={(e) => setNewAula({ ...newAula, tipoAula: e.target.value as string })}
+              onChange={(e) => {
+                setNewAula({ ...newAula, tipoAula: e.target.value as string })
+                setErrors({ ...errors, tipoAula: "" })
+              }}
             >
               <MenuItem value="Teórica">Teórica</MenuItem>
               <MenuItem value="Laboratorio">Laboratorio</MenuItem>
             </Select>
+            {errors.tipoAula && <FormHelperText>{errors.tipoAula}</FormHelperText>}
           </FormControl>
           <TextField
             margin="dense"
@@ -212,7 +245,12 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
             type="number"
             fullWidth
             value={newAula.capacidadMaxima}
-            onChange={(e) => setNewAula({ ...newAula, capacidadMaxima: Number(e.target.value) })}
+            onChange={(e) => {
+              setNewAula({ ...newAula, capacidadMaxima: Number(e.target.value) })
+              setErrors({ ...errors, capacidadMaxima: "" })
+            }}
+            error={!!errors.capacidadMaxima}
+            helperText={errors.capacidadMaxima}
           />
         </DialogContent>
         <DialogActions>
@@ -225,3 +263,4 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
 }
 
 export default Aulas
+
