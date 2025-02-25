@@ -360,6 +360,7 @@ const Secciones: React.FC<SeccionesProps> = ({
                 profesores={profesores}
                 materias={materias}
                 aulas={aulas}
+                selectedSeccion={selectedSeccion}
               />
             )}
           </Box>
