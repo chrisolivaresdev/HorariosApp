@@ -70,7 +70,7 @@ interface Aula {
 
 interface GeneradorHorarioProps {
   seccionId: number
-  selectedSeccion:any
+  selectedSeccion: any
 }
 
 const profesoresPorDefecto: Profesor[] = [
@@ -351,16 +351,17 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
     // Update remaining hours
     setHorasRestantes((prev) => {
-      const horasOriginales = editingClase
-        ? asignaturasPorDefecto.find((asignatura) => asignatura.nombre === nuevaClase.materia)?.horasSemanales || 0
-        : prev[nuevaClaseConHoras.materia]
+      const horasOriginales = prev[nuevaClaseConHoras.materia]
       return {
         ...prev,
         [nuevaClaseConHoras.materia]: horasOriginales - totalHorasAsignadas,
       }
     })
 
+    // Si estamos editando, no es necesario eliminar la clase original porque ya lo hicimos en handleEdit
+
     console.log("Clase guardada:", nuevaClaseConHoras)
+
     if (!editingClase) {
       setCreatedSubjects((prev) => [...prev, nuevaClase.materia])
     }
@@ -477,6 +478,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     setOpen(false)
   }
 
+  console.log(clases)
+
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
       <style>{printStyles}</style>
@@ -493,17 +496,16 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
       </Box>
 
       <Box ref={horarioRef}>
+        <Box sx={{ mb: 2, textAlign: "center" }}>
+          <Typography variant="h5" gutterBottom>
+            {selectedSeccion?.nombreSeccion}
+          </Typography>
+          <Typography variant="subtitle2" color="text.secondary">
+            Trayecto {selectedSeccion?.trayecto === 0 ? "Inicial" : selectedSeccion?.trayecto} - Trimestre{" "}
+            {selectedSeccion?.trimestre}
+          </Typography>
+        </Box>
 
-      <Box sx={{ mb: 2, textAlign: "center" }}>
-        <Typography variant="h5" gutterBottom>
-          {selectedSeccion?.nombreSeccion}
-        </Typography>
-        <Typography variant="subtitle2" color="text.secondary">
-          Trayecto {selectedSeccion?.trayecto === 0 ? "Inicial" : selectedSeccion?.trayecto} - Trimestre{" "}
-          {selectedSeccion?.trimestre}
-        </Typography>
-      </Box>
-      
         {isMobile ? (
           // Vista móvil: horario por día
           <Box sx={{ mb: 2 }}>
