@@ -2,35 +2,62 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useContext, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { TextField, Button, Container, Typography, Box, Paper } from "@mui/material"
 import { motion } from "framer-motion"
 import { LockOutlined } from "@mui/icons-material"
+import axiosInstance from "../axios/axiosInstance"
+import { MyContext } from '../context/Context';
+import Swal from "sweetalert2"
 
-interface LoginProps {
-  setIsAuthenticated: (value: boolean) => void
-  setUserRole: (role: string) => void
-}
 
-const Login = ({ setIsAuthenticated, setUserRole }: LoginProps) => {
+const Login = () => {
+  const context = useContext(MyContext);
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (username === "admin" && password === "adminpassword") {
-      setIsAuthenticated(true)
-      setUserRole("admin")
-      navigate("/")
-    } else if (username === "user" && password === "userpassword") {
-      setIsAuthenticated(true)
-      setUserRole("user")
-      navigate("/")
-    } else {
-      alert("Credenciales incorrectas")
+    const data={
+      username,
+      password
+    } 
+    let ruta:string
+
+    if(username.toLowerCase() === "admin") {
+      ruta = '/auth/login/admin'
+    }else {
+      ruta = '/auth/login'
     }
+
+    axiosInstance.post(ruta, data)
+  .then(response => {
+    localStorage.setItem('token', response.data.access_token)
+    localStorage.setItem('role', response.data.role)
+
+    if(localStorage.getItem('role') === 'ADMIN'){
+      navigate("/user-management")
+    }else {
+      navigate("/")
+    }
+    Swal.fire({
+      title: 'Bien!',
+      text: 'has iniciado sesion corectamente.',
+      icon: 'success',
+    });
+
+  })
+  .catch(error => {
+    Swal.fire({
+      title: '¡Error!',
+      text: 'Credenciales invalidas.',
+      icon: 'error',
+    });
+    console.error('Error:', error);
+  });
+ 
   }
 
   return (

@@ -37,15 +37,17 @@ import {
   IconButton,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
+import Swal from "sweetalert2"
+import axiosInstance from "../axios/axiosInstance"
 
 export interface Asignatura {
   id: number
-  nombreAsignatura: string
-  tipoAsignatura: string
-  duracionAsignatura: string
-  trayecto: number
-  trimestres: number[]
-  horasSemanales: number
+  name: string
+  subject_type: string
+  duration: string
+  journey: string
+  quarters: string[]
+  weekly_hours: string
 }
 
 const Asignaturas: React.FC = () => {
@@ -54,12 +56,12 @@ const Asignaturas: React.FC = () => {
   const [open, setOpen] = useState(false)
   const [editingAsignatura, setEditingAsignatura] = useState<Asignatura | null>(null)
   const [newAsignatura, setNewAsignatura] = useState<Omit<Asignatura, "id">>({
-    nombreAsignatura: "",
-    tipoAsignatura: "",
-    duracionAsignatura: "",
-    trayecto: 1,
-    trimestres: [],
-    horasSemanales: 0,
+    name: "",
+    subject_type: "",
+    duration: "",
+    journey: "",
+    quarters: [],
+    weekly_hours: "0",
   })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
@@ -70,26 +72,30 @@ const Asignaturas: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
   useEffect(() => {
-    if (newAsignatura.trayecto === 0) {
+    getSubjects()
+  }, [])
+
+  useEffect(() => {
+    if (newAsignatura.journey == "0") {
       setNewAsignatura({
         ...newAsignatura,
-        duracionAsignatura: "Trimestral",
-        trimestres: [1],
+        duration: "Trimestral",
+        quarters: ["1"],
       })
     } else {
-      if (newAsignatura.duracionAsignatura === "Anual") {
-        setNewAsignatura({ ...newAsignatura, trimestres: [1, 2, 3] })
-      } else if (newAsignatura.duracionAsignatura === "Trimestral") {
-        setNewAsignatura({ ...newAsignatura, trimestres: newAsignatura.trimestres.slice(0, 1) })
-      } else if (newAsignatura.duracionAsignatura === "Semestral") {
-        setNewAsignatura({ ...newAsignatura, trimestres: newAsignatura.trimestres.slice(0, 2) })
+      if (newAsignatura.duration === "Anual") {
+        setNewAsignatura({ ...newAsignatura, quarters: ["1", "2", "3"] })
+      } else if (newAsignatura.duration === "Trimestral") {
+        setNewAsignatura({ ...newAsignatura, quarters: newAsignatura.quarters.slice(0, 1) })
+      } else if (newAsignatura.duration === "Semestral") {
+        setNewAsignatura({ ...newAsignatura, quarters: newAsignatura.quarters.slice(0, 2) })
       }
     }
-  }, [newAsignatura.trayecto, newAsignatura.duracionAsignatura])
+  }, [newAsignatura.journey, newAsignatura.duration])
 
   useEffect(() => {
     const filtered = asignaturas.filter((asignatura) =>
-      asignatura.nombreAsignatura.toLowerCase().includes(searchTerm.toLowerCase()),
+      asignatura.name.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     setFilteredAsignaturas(filtered)
     setPage(0)
@@ -98,12 +104,12 @@ const Asignaturas: React.FC = () => {
   const handleOpen = () => {
     setEditingAsignatura(null)
     setNewAsignatura({
-      nombreAsignatura: "",
-      tipoAsignatura: "",
-      duracionAsignatura: "",
-      trayecto: 1,
-      trimestres: [],
-      horasSemanales: 1,
+      name: "",
+      subject_type: "",
+      duration: "",
+      journey: "",
+      quarters: [],
+      weekly_hours: "",
     })
     setErrors({})
     setOpen(true)
@@ -116,25 +122,69 @@ const Asignaturas: React.FC = () => {
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
-    if (!newAsignatura.nombreAsignatura) newErrors.nombreAsignatura = "El nombre es requerido"
-    if (!newAsignatura.tipoAsignatura) newErrors.tipoAsignatura = "El tipo es requerido"
-    if (!newAsignatura.duracionAsignatura) newErrors.duracionAsignatura = "La duración es requerida"
-    if (newAsignatura.trayecto === undefined) newErrors.trayecto = "El trayecto es requerido"
-    if (newAsignatura.trimestres.length === 0) newErrors.trimestres = "Seleccione al menos un trimestre"
-    if (newAsignatura.horasSemanales <= 0) newErrors.horasSemanales = "Las horas semanales deben ser mayores a 0"
+    if (!newAsignatura.name) newErrors.name = "El nombre es requerido"
+    if (!newAsignatura.subject_type) newErrors.subject_type = "El tipo es requerido"
+    if (!newAsignatura.duration) newErrors.duration = "La duración es requerida"
+    if (newAsignatura.journey === undefined) newErrors.journey = "El journey es requerido"
+    if (newAsignatura.quarters.length === 0) newErrors.quarters = "Seleccione al menos un trimestre"
+    if (newAsignatura.weekly_hours == "0") newErrors.weekly_hours = "Las horas semanales deben ser mayores a 0"
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  const getSubjects = () => {
+    axiosInstance.get("subjects")
+      .then(response => {
+        setAsignaturas(response.data)
+      })
+      .catch(error => {
+        Swal.fire({
+          title: '¡Error!',
+          text: 'A ocurrido un error.',
+          icon: 'error',
+        });
+        console.error('Error:', error);
+      });
   }
 
   const handleSave = () => {
     if (validateForm()) {
       if (editingAsignatura) {
-        setAsignaturas(
-          asignaturas.map((a) => (a.id === editingAsignatura.id ? { ...editingAsignatura, ...newAsignatura } : a)),
-        )
+        axiosInstance.patch(`subjects/${editingAsignatura.id}`, newAsignatura)
+      .then(response => {
+        Swal.fire({
+          title: 'Bien!',
+          text: 'Asignatura editada correctamente!.',
+          icon: 'success',
+        });
+      })
+      getSubjects()
+      .catch(error => {
+        Swal.fire({
+          title: '¡Error!',
+          text: 'A ocurrido un error.',
+          icon: 'error',
+        });
+        console.error('Error:', error);
+      });
       } else {
-        const asignaturaToAdd = { ...newAsignatura, id: Date.now() }
-        setAsignaturas([...asignaturas, asignaturaToAdd])
+        axiosInstance.post('/subjects', newAsignatura)
+        .then(response => {
+          Swal.fire({
+            title: 'Bien!',
+            text: 'Asignatura creadoa correctamente!.',
+            icon: 'success',
+          });
+          getSubjects()
+        })
+        .catch(error => {
+          Swal.fire({
+            title: '¡Error!',
+            text: 'A ocurrido un error.',
+            icon: 'error',
+          });
+          console.error('Error:', error);
+        });
       }
       console.log(
         "Asignatura guardada:",
@@ -151,22 +201,51 @@ const Asignaturas: React.FC = () => {
   }
 
   const handleDelete = (id: number) => {
-    setAsignaturas(asignaturas.filter((a) => a.id !== id))
+    Swal.fire({
+      title: '¿Estás seguro de eliminar esta asignatura?',
+      text: '¡No podrás deshacer esta acción!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminalo'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axiosInstance.delete(`subjects/${id}`)
+        .then(response => {
+          Swal.fire(
+            'Eliminado!',
+            'La asignatura ha sido eliminada.',
+            'success'
+          );
+          getSubjects()
+        })
+        .catch(error => {
+          Swal.fire({
+            title: '¡Error!',
+            text: 'A ocurrido un error.',
+            icon: 'error',
+          });
+          console.error('Error:', error);
+        });
+        
+      }
+    });
   }
 
-  const handleTrimestresChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    const selectedTrimestres = event.target.value as number[]
-    let updatedTrimestres = selectedTrimestres
+  const handlequartersChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    const selectedquarters = event.target.value as string[]
+    let updatedquarters = selectedquarters
 
-    if (newAsignatura.duracionAsignatura === "Trimestral" && selectedTrimestres.length > 1) {
-      updatedTrimestres = [selectedTrimestres[selectedTrimestres.length - 1]]
-    } else if (newAsignatura.duracionAsignatura === "Semestral" && selectedTrimestres.length > 2) {
-      updatedTrimestres = selectedTrimestres.slice(0, 2)
+    if (newAsignatura.duration === "Trimestral" && selectedquarters.length > 1) {
+      updatedquarters = [selectedquarters[selectedquarters.length - 1]]
+    } else if (newAsignatura.duration === "Semestral" && selectedquarters.length > 2) {
+      updatedquarters = selectedquarters.slice(0, 2)
     }
 
     setNewAsignatura({
       ...newAsignatura,
-      trimestres: updatedTrimestres,
+      quarters: updatedquarters,
     })
   }
 
@@ -206,25 +285,25 @@ const Asignaturas: React.FC = () => {
             <Grid item xs={12} key={asignatura.id}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6">{asignatura.nombreAsignatura}</Typography>
-                  <Typography variant="body2">Tipo: {asignatura.tipoAsignatura}</Typography>
-                  <Typography variant="body2">Duración: {asignatura.duracionAsignatura}</Typography>
+                  <Typography variant="h6">{asignatura.name}</Typography>
+                  <Typography variant="body2">Tipo: {asignatura.subject_type}</Typography>
+                  <Typography variant="body2">Duración: {asignatura.duration}</Typography>
                   <Typography variant="body2">
-                    Trayecto: {asignatura.trayecto === 0 ? "Inicial" : asignatura.trayecto}
+                    journey: {asignatura.journey === "0" ? "Inicial" : asignatura.journey}
                   </Typography>
                   <Typography variant="body2">
-                    Trimestres: {asignatura.trimestres.map((t) => `${t}`).join(", ")}
+                    quarters: {asignatura.quarters.map((t) => `${t}`).join(", ")}
                   </Typography>
-                  <Typography variant="body2">Horas Semanales: {asignatura.horasSemanales}</Typography>
+                  <Typography variant="body2">Horas Semanales: {asignatura.weekly_hours}</Typography>
                 </CardContent>
                 <CardActions>
                 <Tooltip title="Editar">
-                      <IconButton onClick={() => handleEdit(asignaturra)}>
+                      <IconButton onClick={() => handleEdit(asignatura)}>
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Eliminar">
-                      <IconButton onClick={() => handleDelete(asignaturra.id)}>
+                      <IconButton onClick={() => handleDelete(asignatura.id)}>
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
@@ -242,7 +321,7 @@ const Asignaturas: React.FC = () => {
                 <TableCell>Tipo</TableCell>
                 <TableCell>Duración</TableCell>
                 <TableCell>Trayecto</TableCell>
-                <TableCell>Trimestres</TableCell>
+                <TableCell>Trimestre</TableCell>
                 <TableCell>Horas Semanales</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
@@ -250,12 +329,12 @@ const Asignaturas: React.FC = () => {
             <TableBody>
               {filteredAsignaturas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((asignatura) => (
                 <TableRow key={asignatura.id}>
-                  <TableCell>{asignatura.nombreAsignatura}</TableCell>
-                  <TableCell>{asignatura.tipoAsignatura}</TableCell>
-                  <TableCell>{asignatura.duracionAsignatura}</TableCell>
-                  <TableCell>{asignatura.trayecto === 0 ? "Inicial" : asignatura.trayecto}</TableCell>
-                  <TableCell>{asignatura.trimestres.map((t) => `${t}`).join(", ")}</TableCell>
-                  <TableCell>{asignatura.horasSemanales}</TableCell>
+                  <TableCell>{asignatura.name}</TableCell>
+                  <TableCell>{asignatura.subject_type}</TableCell>
+                  <TableCell>{asignatura.duration}</TableCell>
+                  <TableCell>{asignatura.journey === "0" ? "Inicial" : asignatura.journey}</TableCell>
+                  <TableCell>{asignatura.quarters.map((t) => `${t}`).join(", ")}</TableCell>
+                  <TableCell>{asignatura.weekly_hours}</TableCell>
                   <TableCell>
                   <Tooltip title="Editar">
                       <IconButton onClick={() => handleEdit(asignatura)}>
@@ -294,80 +373,80 @@ const Asignaturas: React.FC = () => {
                 label="Nombre de la Asignatura"
                 type="text"
                 fullWidth
-                value={newAsignatura.nombreAsignatura}
-                onChange={(e) => setNewAsignatura({ ...newAsignatura, nombreAsignatura: e.target.value })}
-                error={!!errors.nombreAsignatura}
-                helperText={errors.nombreAsignatura}
+                value={newAsignatura.name}
+                onChange={(e) => setNewAsignatura({ ...newAsignatura, name: e.target.value })}
+                error={!!errors.name}
+                helperText={errors.name}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="dense" error={!!errors.tipoAsignatura}>
+              <FormControl fullWidth margin="dense" error={!!errors.subject_type}>
                 <InputLabel>Tipo de Asignatura</InputLabel>
                 <Select
-                  value={newAsignatura.tipoAsignatura}
-                  onChange={(e) => setNewAsignatura({ ...newAsignatura, tipoAsignatura: e.target.value as string })}
+                  value={newAsignatura.subject_type}
+                  onChange={(e) => setNewAsignatura({ ...newAsignatura, subject_type: e.target.value as string })}
                 >
-                  <MenuItem value="Teórica">Teórica</MenuItem>
-                  <MenuItem value="Práctica">Práctica</MenuItem>
-                  <MenuItem value="Teórico-Práctica">Teórico-Práctica</MenuItem>
+                  <MenuItem value="THEORETICAL">Teórica</MenuItem>
+                  <MenuItem value="PRACTICAL">Práctica</MenuItem>
+                  <MenuItem value="THEORETICAL_PRACTICAL">Teórico-Práctica</MenuItem>
                 </Select>
-                {errors.tipoAsignatura && <FormHelperText>{errors.tipoAsignatura}</FormHelperText>}
+                {errors.subject_type && <FormHelperText>{errors.subject_type}</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="dense" error={!!errors.duracionAsignatura}>
+              <FormControl fullWidth margin="dense" error={!!errors.duration}>
                 <InputLabel>Duración de la Asignatura</InputLabel>
                 <Select
-                  value={newAsignatura.duracionAsignatura}
-                  onChange={(e) => setNewAsignatura({ ...newAsignatura, duracionAsignatura: e.target.value as string })}
-                  disabled={newAsignatura.trayecto === 0}
+                  value={newAsignatura.duration}
+                  onChange={(e) => setNewAsignatura({ ...newAsignatura, duration: e.target.value as string })}
+                  disabled={newAsignatura.journey === "0"}
                 >
                   <MenuItem value="Trimestral">Trimestral</MenuItem>
                   <MenuItem value="Semestral">Semestral</MenuItem>
                   <MenuItem value="Anual">Anual</MenuItem>
                 </Select>
-                {errors.duracionAsignatura && <FormHelperText>{errors.duracionAsignatura}</FormHelperText>}
+                {errors.duration && <FormHelperText>{errors.duration}</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="dense" error={!!errors.trayecto}>
+              <FormControl fullWidth margin="dense" error={!!errors.journey}>
                 <InputLabel>Trayecto</InputLabel>
                 <Select
-                  value={newAsignatura.trayecto}
-                  onChange={(e) => setNewAsignatura({ ...newAsignatura, trayecto: Number(e.target.value) })}
+                  value={newAsignatura.journey}
+                  onChange={(e) => setNewAsignatura({ ...newAsignatura, journey: e.target.value })}
                 >
-                  <MenuItem value={0}>Inicial</MenuItem>
-                  <MenuItem value={1}>1</MenuItem>
-                  <MenuItem value={2}>2</MenuItem>
-                  <MenuItem value={3}>Prosecución</MenuItem>
-                  <MenuItem value={4}>3</MenuItem>
-                  <MenuItem value={5}>4</MenuItem>
+                  <MenuItem value={"0"}>Inicial</MenuItem>
+                  <MenuItem value={"1"}>1</MenuItem>
+                  <MenuItem value={"2"}>2</MenuItem>
+                  <MenuItem value={"3"}>Prosecución</MenuItem>
+                  <MenuItem value={"4"}>3</MenuItem>
+                  <MenuItem value={"5"}>4</MenuItem>
                 </Select>
-                {errors.trayecto && <FormHelperText>{errors.trayecto}</FormHelperText>}
+                {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="dense" error={!!errors.trimestres}>
-                <InputLabel>Trimestres</InputLabel>
+              <FormControl fullWidth margin="dense" error={!!errors.quarters}>
+                <InputLabel>trimesters</InputLabel>
                 <Select
                   multiple
-                  value={newAsignatura.trimestres}
-                  onChange={handleTrimestresChange}
-                  input={<OutlinedInput label="Trimestres" />}
+                  value={newAsignatura.quarters}
+                  onChange={handlequartersChange}
+                  input={<OutlinedInput label="quarters" />}
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {(selected as number[]).map((value) => (
+                      {(selected as string[]).map((value) => (
                         <Chip key={value} label={value} />
                       ))}
                     </Box>
                   )}
-                  disabled={newAsignatura.duracionAsignatura === "Anual" || newAsignatura.trayecto === 0}
+                  disabled={newAsignatura.duration === "Anual" || newAsignatura.journey === "0"}
                 >
-                  <MenuItem value={1}>1</MenuItem>
-                  <MenuItem value={2}>2</MenuItem>
-                  <MenuItem value={3}>3</MenuItem>
+                  <MenuItem value={"1"}>1</MenuItem>
+                  <MenuItem value={"2"}>2</MenuItem>
+                  <MenuItem value={"3"}>3</MenuItem>
                 </Select>
-                {errors.trimestres && <FormHelperText>{errors.trimestres}</FormHelperText>}
+                {errors.quarters && <FormHelperText>{errors.quarters}</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -376,15 +455,15 @@ const Asignaturas: React.FC = () => {
                 label="Horas Semanales"
                 type="number"
                 fullWidth
-                value={newAsignatura.horasSemanales}
+                value={newAsignatura.weekly_hours}
                 onChange={(e) => {
                   const value = Number(e.target.value)
                   if (value >= 1) {
-                    setNewAsignatura({ ...newAsignatura, horasSemanales: value })
+                    setNewAsignatura({ ...newAsignatura, weekly_hours: e.target.value.toString() })
                   }
                 }}
-                error={!!errors.horasSemanales}
-                helperText={errors.horasSemanales}
+                error={!!errors.weekly_hours}
+                helperText={errors.weekly_hours}
               />
             </Grid>
           </Grid>

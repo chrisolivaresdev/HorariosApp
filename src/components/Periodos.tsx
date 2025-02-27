@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Button,
   Table,
@@ -37,12 +37,14 @@ import {
 } from "@mui/icons-material"
 import Aulas from "./Aulas"
 import Secciones from "./Secciones"
+import Swal from "sweetalert2"
+import axiosInstance from "../axios/axiosInstance"
 
 interface Periodo {
   id: number
-  nombre: string
-  fechaInicio: string
-  fechaFin: string
+  name: string
+  start_date: string
+  end_date: string
   aulas: any[]
   secciones: any[]
 }
@@ -51,9 +53,9 @@ const Periodos: React.FC = () => {
   const [periodos, setPeriodos] = useState<Periodo[]>([])
   const [open, setOpen] = useState(false)
   const [newPeriodo, setNewPeriodo] = useState<Omit<Periodo, "id" | "aulas" | "secciones">>({
-    nombre: "",
-    fechaInicio: "",
-    fechaFin: "",
+    name: "",
+    start_date: "",
+    end_date: "",
   })
   const [selectedPeriodo, setSelectedPeriodo] = useState<Periodo | null>(null)
   const [tabValue, setTabValue] = useState(0)
@@ -66,9 +68,28 @@ const Periodos: React.FC = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
+  const getPeriods = () => {
+    axiosInstance.get("periods")
+      .then(response => {
+        setPeriodos(response.data)
+      })
+      .catch(error => {
+        Swal.fire({
+          title: '¡Error!',
+          text: 'A ocurrido un error.',
+          icon: 'error',
+        });
+        console.error('Error:', error);
+      });
+  }
+
+  useEffect(() => {
+    getPeriods()
+  }, [])
+
   const handleOpen = () => {
     setEditingPeriodo(null)
-    setNewPeriodo({ nombre: "", fechaInicio: "", fechaFin: "" })
+    setNewPeriodo({ name: "", start_date: "", end_date: "" })
     setOpen(true)
   }
 
@@ -77,59 +98,117 @@ const Periodos: React.FC = () => {
   const handleSave = () => {
     let isValid = true
 
-    if (!newPeriodo.nombre) {
+    if (!newPeriodo.name) {
       setNombreError("El nombre es obligatorio")
       isValid = false
     } else {
       setNombreError("")
     }
 
-    if (!newPeriodo.fechaInicio) {
+    if (!newPeriodo.start_date) {
       setFechaInicioError("La fecha de inicio es obligatoria")
       isValid = false
     } else {
       setFechaInicioError("")
     }
 
-    if (!newPeriodo.fechaFin) {
+    if (!newPeriodo.end_date) {
       setFechaFinError("La fecha de fin es obligatoria")
       isValid = false
     } else {
       setFechaFinError("")
     }
-
+    
     if (!isValid) return
-
-    if (editingPeriodo) {
-      setPeriodos(periodos.map((p) => (p.id === editingPeriodo.id ? { ...editingPeriodo, ...newPeriodo } : p)))
-    } else {
-      const periodoToAdd = {
-        ...newPeriodo,
-        id: Date.now(),
-        aulas: [],
-        secciones: [],
-      }
-      setPeriodos([...periodos, periodoToAdd])
+    let  period = {
+      name : newPeriodo?.name,
+      start_date: new Date(newPeriodo.start_date),
+      end_date: new Date(newPeriodo.end_date)
     }
-    setNewPeriodo({ nombre: "", fechaInicio: "", fechaFin: "" })
+    if (editingPeriodo) {
+     
+      axiosInstance.patch(`/periods/${editingPeriodo.id}`, period)
+      .then(response => {
+        Swal.fire({
+          title: 'Bien!',
+          text: 'Periodo editado correctamente!.',
+          icon: 'success',
+        });
+        getPeriods()
+      })
+      .catch(error => {
+        Swal.fire({
+          title: '¡Error!',
+          text: 'A ocurrido un error.',
+          icon: 'error',
+        });
+        console.error('Error:', error);
+      });
+    } else {
+      axiosInstance.post('/periods', period)
+      .then(response => {
+        Swal.fire({
+          title: 'Bien!',
+          text: 'Periodo creado correctamente!.',
+          icon: 'success',
+        });
+        getPeriods()
+
+      })
+      .catch(error => {
+        Swal.fire({
+          title: '¡Error!',
+          text: 'A ocurrido un error.',
+          icon: 'error',
+        });
+        console.error('Error:', error);
+      });
+    }
     handleClose()
   }
 
   const handleEdit = (periodo: Periodo) => {
+    console.log(periodo)
     setEditingPeriodo(periodo)
     setNewPeriodo({
-      nombre: periodo.nombre,
-      fechaInicio: periodo.fechaInicio,
-      fechaFin: periodo.fechaFin,
+      name: periodo.name,
+      start_date: periodo.start_date,
+      end_date: periodo.end_date,
     })
     setOpen(true)
   }
 
   const handleDelete = (id: number) => {
-    setPeriodos(periodos.filter((p) => p.id !== id))
-    if (selectedPeriodo && selectedPeriodo.id === id) {
-      setSelectedPeriodo(null)
-    }
+    Swal.fire({
+      title: '¿Estás seguro de eliminar este periodo?',
+      text: '¡No podrás deshacer esta acción!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminalo'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axiosInstance.delete(`/periods/${id}`)
+        .then(response => {
+          Swal.fire(
+            'Eliminado!',
+            'El periodo ha sido eliminado.',
+            'success'
+          );
+          getPeriods()
+        })
+        .catch(error => {
+          Swal.fire({
+            title: '¡Error!',
+            text: 'A ocurrido un error.',
+            icon: 'error',
+          });
+          console.error('Error:', error);
+        });
+        
+      }
+    });
   }
 
   const handlePeriodoClick = (periodo: Periodo) => {
@@ -148,6 +227,15 @@ const Periodos: React.FC = () => {
     }
   }
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+
   return (
     <Box sx={{ width: "100%" }}>
       <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
@@ -159,9 +247,9 @@ const Periodos: React.FC = () => {
             <Grid item xs={12} key={periodo.id}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6">{periodo.nombre}</Typography>
-                  <Typography variant="body2">Inicio: {periodo.fechaInicio}</Typography>
-                  <Typography variant="body2">Fin: {periodo.fechaFin}</Typography>
+                  <Typography variant="h6">{periodo.name}</Typography>
+                  <Typography variant="body2">Inicio: {periodo.start_date}</Typography>
+                  <Typography variant="body2">Fin: {periodo.end_date}</Typography>
                 </CardContent>
                 <CardActions>
                   <Tooltip title="Ver Detalles">
@@ -198,9 +286,9 @@ const Periodos: React.FC = () => {
             <TableBody>
               {periodos.map((periodo) => (
                 <TableRow key={periodo.id}>
-                  <TableCell>{periodo.nombre}</TableCell>
-                  <TableCell>{periodo.fechaInicio}</TableCell>
-                  <TableCell>{periodo.fechaFin}</TableCell>
+                  <TableCell>{periodo.name}</TableCell>
+                  <TableCell>{formatDate(periodo.start_date)}</TableCell>
+                  <TableCell>{formatDate(periodo.end_date)}</TableCell>
                   <TableCell>
                     <Tooltip title="Ver Detalles">
                       <IconButton onClick={() => handlePeriodoClick(periodo)}>
@@ -229,7 +317,7 @@ const Periodos: React.FC = () => {
       {selectedPeriodo && (
         <Box sx={{ width: "100%", mt: 4 }}>
           <Typography variant="h5" gutterBottom>
-            Detalles del Periodo: {selectedPeriodo.nombre}
+            Detalles del Periodo: {selectedPeriodo.name}
           </Typography>
           <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
             <Tabs
@@ -276,8 +364,8 @@ const Periodos: React.FC = () => {
                 type="text"
                 fullWidth
                 required
-                value={newPeriodo.nombre}
-                onChange={(e) => setNewPeriodo({ ...newPeriodo, nombre: e.target.value })}
+                value={newPeriodo.name}
+                onChange={(e) => setNewPeriodo({ ...newPeriodo, name: e.target.value })}
                 error={!!nombreError}
                 helperText={nombreError}
               />
@@ -290,8 +378,8 @@ const Periodos: React.FC = () => {
                 fullWidth
                 required
                 InputLabelProps={{ shrink: true }}
-                value={newPeriodo.fechaInicio}
-                onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaInicio: e.target.value })}
+                value={newPeriodo.start_date}
+                onChange={(e) => setNewPeriodo({ ...newPeriodo, start_date: e.target.value })}
                 error={!!fechaInicioError}
                 helperText={fechaInicioError}
               />
@@ -304,8 +392,8 @@ const Periodos: React.FC = () => {
                 fullWidth
                 required
                 InputLabelProps={{ shrink: true }}
-                value={newPeriodo.fechaFin}
-                onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaFin: e.target.value })}
+                value={newPeriodo.end_date}
+                onChange={(e) => setNewPeriodo({ ...newPeriodo, end_date: e.target.value })}
                 error={!!fechaFinError}
                 helperText={fechaFinError}
               />

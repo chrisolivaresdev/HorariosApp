@@ -3,16 +3,17 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { useState, useMemo, createContext } from "react"
+import { useState, useMemo, createContext, useContext } from "react"
 import { AnimatePresence } from "framer-motion"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
+import { MyProvider, MyContext } from './context/Context';
 
 export const ColorModeContext = createContext({ toggleColorMode: () => {} })
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userRole, setUserRole] = useState<string>("")
+  const context = useContext(MyContext);
+
   const [mode, setMode] = useState<"light" | "dark">("light")
 
   const colorMode = useMemo(
@@ -100,32 +101,36 @@ function App() {
     [mode],
   )
 
+  console.log(context?.sesion?.access_token)
+
   return (
-    <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <AnimatePresence mode="wait">
-            <Routes>
-              <Route
-                path="/login"
-                element={<Login setIsAuthenticated={setIsAuthenticated} setUserRole={setUserRole} />}
-              />
-              <Route
-                path="/*"
-                element={
-                  isAuthenticated ? (
-                    <Dashboard setIsAuthenticated={setIsAuthenticated} userRole={userRole} />
-                  ) : (
-                    <Navigate to="/login" replace />
-                  )
-                }
-              />
-            </Routes>
-          </AnimatePresence>
-        </Router>
-      </ThemeProvider>
-    </ColorModeContext.Provider>
+    <MyProvider>
+      <ColorModeContext.Provider value={colorMode}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <AnimatePresence mode="wait">
+              <Routes>
+                <Route
+                  path="/login"
+                  element={<Login/>}
+                />
+                <Route
+                  path="/*"
+                  element={
+                    localStorage.getItem('token') ? (
+                      <Dashboard />
+                    ) : (
+                      <Navigate to="/login" replace />
+                    )
+                  }
+                />
+              </Routes>
+            </AnimatePresence>
+          </Router>
+        </ThemeProvider>
+      </ColorModeContext.Provider>
+    </MyProvider>
   )
 }
 

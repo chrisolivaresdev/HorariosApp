@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useContext } from "react"
 import {
   AppBar,
@@ -38,13 +36,12 @@ import Profesores from "./Profesores"
 import Carreras from "./Carreras"
 import UserManagement from "./UserManagement"
 import { ColorModeContext } from "../App"
+import { MyContext } from '../context/Context';
 
-interface DashboardProps {
-  setIsAuthenticated: (value: boolean) => void
-  userRole: string
-}
 
-const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated, userRole }) => {
+
+const Dashboard = () => {
+  const context = useContext(MyContext);
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
@@ -56,19 +53,22 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated, userRole }) =
   }
 
   const handleLogout = () => {
-    setIsAuthenticated(false)
+    localStorage.removeItem("token")
+    localStorage.removeItem("role")
     navigate("/login")
   }
 
   let menuItems = [
-    { text: "Periodos", icon: <Home />, path: "/" },
-    { text: "Asignaturas", icon: <Book />, path: "/asignaturas" },
-    { text: "Profesores", icon: <Person />, path: "/profesores" },
-    // { text: "Carreras", icon: <School />, path: "/carreras" },
   ]
-
-  if (userRole === "admin") {
+  console.log(localStorage.getItem('role'))
+  if (localStorage.getItem('role') === "ADMIN") {
     menuItems = [{ text: "User Management", icon: <SupervisorAccount />, path: "/user-management" }]
+  }else {
+    menuItems = [
+      { text: "Periodos", icon: <Home />, path: "/" },
+      { text: "Asignaturas", icon: <Book />, path: "/asignaturas" },
+      { text: "Profesores", icon: <Person />, path: "/profesores" },
+    ]
   }
 
   return (
@@ -140,11 +140,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated, userRole }) =
         <Toolbar />
         <Container maxWidth="lg">
           <Routes>
-            <Route path="/" element={<Periodos />} />
-            <Route path="/asignaturas" element={<Asignaturas />} />
-            <Route path="/profesores" element={<Profesores />} />
-            <Route path="/carreras" element={<Carreras />} />
-            {userRole === "admin" && <Route path="/user-management" element={<UserManagement />} />}
+            {localStorage.getItem('role') === "ADMIN" && <Route path="/user-management" element={<UserManagement />} />}
+            {localStorage.getItem('role') === "USER" &&
+              <>
+                <Route path="/" element={<Periodos />} />
+                <Route path="/asignaturas" element={<Asignaturas />} />
+                <Route path="/profesores" element={<Profesores />} />
+                <Route path="/carreras" element={<Carreras />} />
+             </>
+            }
+            
           </Routes>
         </Container>
       </Box>
