@@ -1,3 +1,7 @@
+"use client"
+
+import type React from "react"
+
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { TextField, Button, Container, Typography, Box, Paper } from "@mui/material"
@@ -6,17 +10,23 @@ import { LockOutlined } from "@mui/icons-material"
 
 interface LoginProps {
   setIsAuthenticated: (value: boolean) => void
+  setUserRole: (role: string) => void
 }
 
-const Login = ({ setIsAuthenticated }: LoginProps) => {
+const Login = ({ setIsAuthenticated, setUserRole }: LoginProps) => {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (username === "admin" && password === "password") {
+    if (username === "admin" && password === "adminpassword") {
       setIsAuthenticated(true)
+      setUserRole("admin")
+      navigate("/")
+    } else if (username === "user" && password === "userpassword") {
+      setIsAuthenticated(true)
+      setUserRole("user")
       navigate("/")
     } else {
       alert("Credenciales incorrectas")

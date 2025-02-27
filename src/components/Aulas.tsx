@@ -29,6 +29,8 @@ import {
   InputAdornment,
   Box,
   FormHelperText,
+  Tooltip,
+  IconButton,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
@@ -157,12 +159,16 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
                   <Typography variant="body2">Capacidad: {aula.capacidadMaxima}</Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(aula)}>
-                    Editar
-                  </Button>
-                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(aula.id)}>
-                    Eliminar
-                  </Button>
+                     <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(aula)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(aula.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -186,12 +192,16 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
                   <TableCell>{aula.tipoAula}</TableCell>
                   <TableCell>{aula.capacidadMaxima}</TableCell>
                   <TableCell>
-                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(aula)}>
-                      Editar
-                    </Button>
-                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(aula.id)}>
-                      Eliminar
-                    </Button>
+                  <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(aula)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(aula.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}

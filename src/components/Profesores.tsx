@@ -34,6 +34,8 @@ import {
   TablePagination,
   InputAdornment,
   FormHelperText,
+  IconButton,
+  Tooltip,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
@@ -246,12 +248,16 @@ const Profesores: React.FC = () => {
                   </Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(profesor)}>
-                    Editar
-                  </Button>
-                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(profesor.id)}>
-                    Eliminar
-                  </Button>
+                <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(profesor)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(profesor.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -281,12 +287,16 @@ const Profesores: React.FC = () => {
                     ))}
                   </TableCell>
                   <TableCell>
-                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(profesor)}>
-                      Editar
-                    </Button>
-                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(profesor.id)}>
-                      Eliminar
-                    </Button>
+                  <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(profesor)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(profesor.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}

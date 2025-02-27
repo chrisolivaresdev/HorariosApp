@@ -29,6 +29,8 @@ import {
   TablePagination,
   InputAdornment,
   FormHelperText,
+  Tooltip,
+  IconButton,
 } from "@mui/material"
 import {
   Add as AddIcon,
@@ -207,15 +209,21 @@ const Secciones: React.FC<SeccionesProps> = ({
                   <Typography variant="body2">Trimestre: {seccion.trimestre}</Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(seccion)}>
-                    Editar
-                  </Button>
-                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(seccion.id)}>
-                    Eliminar
-                  </Button>
-                  <Button size="small" startIcon={<ScheduleIcon />} onClick={() => handleOpenHorario(seccion)}>
-                    Generar Horario
-                  </Button>
+                   <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(seccion)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Generar Horario">
+                      <IconButton onClick={() => handleOpenHorario(seccion)}>
+                        <ScheduleIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(seccion.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -241,15 +249,22 @@ const Secciones: React.FC<SeccionesProps> = ({
                   <TableCell>{seccion.trayecto === 0 ? "Inicial" : seccion.trayecto}</TableCell>
                   <TableCell>{seccion.trimestre}</TableCell>
                   <TableCell>
-                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(seccion)}>
-                      Editar
-                    </Button>
-                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(seccion.id)}>
-                      Eliminar
-                    </Button>
-                    <Button startIcon={<ScheduleIcon />} onClick={() => handleOpenHorario(seccion)}>
-                      Generar Horario
-                    </Button>
+                    <Tooltip title="Editar">
+                        <IconButton onClick={() => handleEdit(seccion)}>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Generar Horario">
+                        <IconButton onClick={() => handleOpenHorario(seccion)}>
+                          <ScheduleIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton onClick={() => handleDelete(seccion.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                     
                   </TableCell>
                 </TableRow>
               ))}

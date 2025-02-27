@@ -1,3 +1,7 @@
+"use client"
+
+import type React from "react"
+
 import { useState, useContext } from "react"
 import {
   AppBar,
@@ -15,20 +19,32 @@ import {
   useTheme,
   Button,
 } from "@mui/material"
-import { Menu as MenuIcon, Home, Book, Person, School, Brightness4, Brightness7, ExitToApp } from "@mui/icons-material"
+import {
+  Menu as MenuIcon,
+  Home,
+  Book,
+  Person,
+  School,
+  Brightness4,
+  Brightness7,
+  ExitToApp,
+  SupervisorAccount,
+} from "@mui/icons-material"
 import { motion } from "framer-motion"
-import { Routes, Route, useNavigate, Navigate } from "react-router-dom"
+import { Routes, Route, useNavigate } from "react-router-dom"
 import Periodos from "./Periodos"
 import Asignaturas from "./Asignaturas"
 import Profesores from "./Profesores"
 import Carreras from "./Carreras"
+import UserManagement from "./UserManagement"
 import { ColorModeContext } from "../App"
 
 interface DashboardProps {
   setIsAuthenticated: (value: boolean) => void
+  userRole: string
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
+const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated, userRole }) => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
@@ -44,12 +60,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
     navigate("/login")
   }
 
-  const menuItems = [
+  let menuItems = [
     { text: "Periodos", icon: <Home />, path: "/" },
     { text: "Asignaturas", icon: <Book />, path: "/asignaturas" },
     { text: "Profesores", icon: <Person />, path: "/profesores" },
     // { text: "Carreras", icon: <School />, path: "/carreras" },
   ]
+
+  if (userRole === "admin") {
+    menuItems = [{ text: "User Management", icon: <SupervisorAccount />, path: "/user-management" }]
+  }
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -59,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Sistema de Horarios
+            Sistema de Horarios Universitarios
           </Typography>
           <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
             {theme.palette.mode === "dark" ? <Brightness7 /> : <Brightness4 />}
@@ -123,9 +143,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setIsAuthenticated }) => {
             <Route path="/" element={<Periodos />} />
             <Route path="/asignaturas" element={<Asignaturas />} />
             <Route path="/profesores" element={<Profesores />} />
-            <Route path="*" element={<Navigate to="/" />} />
-
-            {/* <Route path="/carreras" element={<Carreras />} /> */}
+            <Route path="/carreras" element={<Carreras />} />
+            {userRole === "admin" && <Route path="/user-management" element={<UserManagement />} />}
           </Routes>
         </Container>
       </Box>

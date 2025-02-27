@@ -1,15 +1,18 @@
+"use client"
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import React, { useState, useMemo } from "react"
+import { useState, useMemo, createContext } from "react"
 import { AnimatePresence } from "framer-motion"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
 
-export const ColorModeContext = React.createContext({ toggleColorMode: () => {} })
+export const ColorModeContext = createContext({ toggleColorMode: () => {} })
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userRole, setUserRole] = useState<string>("")
   const [mode, setMode] = useState<"light" | "dark">("light")
 
   const colorMode = useMemo(
@@ -104,15 +107,18 @@ function App() {
         <Router>
           <AnimatePresence mode="wait">
             <Routes>
-              <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+              <Route
+                path="/login"
+                element={<Login setIsAuthenticated={setIsAuthenticated} setUserRole={setUserRole} />}
+              />
               <Route
                 path="/*"
                 element={
                   isAuthenticated ? (
-                    <Dashboard setIsAuthenticated={setIsAuthenticated} />
+                    <Dashboard setIsAuthenticated={setIsAuthenticated} userRole={userRole} />
                   ) : (
                     <Navigate to="/login" replace />
-                  )        
+                  )
                 }
               />
             </Routes>

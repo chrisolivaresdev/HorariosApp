@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Button,
   Table,
@@ -26,10 +26,15 @@ import {
   Card,
   CardContent,
   CardActions,
-  TablePagination,
-  InputAdornment,
+  IconButton,
+  Tooltip,
 } from "@mui/material"
-import { Add as AddIcon, Search as SearchIcon } from "@mui/icons-material"
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+} from "@mui/icons-material"
 import Aulas from "./Aulas"
 import Secciones from "./Secciones"
 
@@ -44,7 +49,6 @@ interface Periodo {
 
 const Periodos: React.FC = () => {
   const [periodos, setPeriodos] = useState<Periodo[]>([])
-  const [filteredPeriodos, setFilteredPeriodos] = useState<Periodo[]>([])
   const [open, setOpen] = useState(false)
   const [newPeriodo, setNewPeriodo] = useState<Omit<Periodo, "id" | "aulas" | "secciones">>({
     nombre: "",
@@ -53,34 +57,79 @@ const Periodos: React.FC = () => {
   })
   const [selectedPeriodo, setSelectedPeriodo] = useState<Periodo | null>(null)
   const [tabValue, setTabValue] = useState(0)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(5)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedSeccion, setSelectedSeccion] = useState<any | null>(null)
+  const [editingPeriodo, setEditingPeriodo] = useState<Periodo | null>(null)
+  const [nombreError, setNombreError] = useState("")
+  const [fechaInicioError, setFechaInicioError] = useState("")
+  const [fechaFinError, setFechaFinError] = useState("")
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
-  useEffect(() => {
-    const filtered = periodos.filter((periodo) => periodo.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
-    setFilteredPeriodos(filtered)
-    setPage(0)
-  }, [searchTerm, periodos])
+  const handleOpen = () => {
+    setEditingPeriodo(null)
+    setNewPeriodo({ nombre: "", fechaInicio: "", fechaFin: "" })
+    setOpen(true)
+  }
 
-  const handleOpen = () => setOpen(true)
   const handleClose = () => setOpen(false)
 
   const handleSave = () => {
-    const periodoToAdd = {
-      ...newPeriodo,
-      id: Date.now(),
-      aulas: [],
-      secciones: [],
+    let isValid = true
+
+    if (!newPeriodo.nombre) {
+      setNombreError("El nombre es obligatorio")
+      isValid = false
+    } else {
+      setNombreError("")
     }
-    setPeriodos([...periodos, periodoToAdd])
+
+    if (!newPeriodo.fechaInicio) {
+      setFechaInicioError("La fecha de inicio es obligatoria")
+      isValid = false
+    } else {
+      setFechaInicioError("")
+    }
+
+    if (!newPeriodo.fechaFin) {
+      setFechaFinError("La fecha de fin es obligatoria")
+      isValid = false
+    } else {
+      setFechaFinError("")
+    }
+
+    if (!isValid) return
+
+    if (editingPeriodo) {
+      setPeriodos(periodos.map((p) => (p.id === editingPeriodo.id ? { ...editingPeriodo, ...newPeriodo } : p)))
+    } else {
+      const periodoToAdd = {
+        ...newPeriodo,
+        id: Date.now(),
+        aulas: [],
+        secciones: [],
+      }
+      setPeriodos([...periodos, periodoToAdd])
+    }
     setNewPeriodo({ nombre: "", fechaInicio: "", fechaFin: "" })
     handleClose()
-    setSelectedPeriodo(periodoToAdd)
-    console.log("Periodo guardado:", periodoToAdd)
+  }
+
+  const handleEdit = (periodo: Periodo) => {
+    setEditingPeriodo(periodo)
+    setNewPeriodo({
+      nombre: periodo.nombre,
+      fechaInicio: periodo.fechaInicio,
+      fechaFin: periodo.fechaFin,
+    })
+    setOpen(true)
+  }
+
+  const handleDelete = (id: number) => {
+    setPeriodos(periodos.filter((p) => p.id !== id))
+    if (selectedPeriodo && selectedPeriodo.id === id) {
+      setSelectedPeriodo(null)
+    }
   }
 
   const handlePeriodoClick = (periodo: Periodo) => {
@@ -97,42 +146,16 @@ const Periodos: React.FC = () => {
     if (selectedPeriodo && selectedPeriodo.id === periodoId) {
       setSelectedPeriodo({ ...selectedPeriodo, [entityType]: newData })
     }
-    console.log(`${entityType} actualizado en periodo ${periodoId}:`, newData, `data del periodo`, selectedPeriodo)
-  }
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage)
-  }
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(Number.parseInt(event.target.value, 10))
-    setPage(0)
   }
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen}>
-          Agregar Periodo
-        </Button>
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="Buscar por nombre"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ mb: 2 }}>
+        Agregar Periodo
+      </Button>
       {isMobile ? (
         <Grid container spacing={2}>
-          {filteredPeriodos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((periodo) => (
+          {periodos.map((periodo) => (
             <Grid item xs={12} key={periodo.id}>
               <Card>
                 <CardContent>
@@ -141,9 +164,21 @@ const Periodos: React.FC = () => {
                   <Typography variant="body2">Fin: {periodo.fechaFin}</Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" onClick={() => handlePeriodoClick(periodo)}>
-                    Ver Detalles
-                  </Button>
+                  <Tooltip title="Ver Detalles">
+                    <IconButton size="small" onClick={() => handlePeriodoClick(periodo)}>
+                      <VisibilityIcon />
+                    </IconButton>
+                  </Tooltip>
+                 <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(periodo)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(periodo.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -161,15 +196,28 @@ const Periodos: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredPeriodos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((periodo) => (
+              {periodos.map((periodo) => (
                 <TableRow key={periodo.id}>
                   <TableCell>{periodo.nombre}</TableCell>
                   <TableCell>{periodo.fechaInicio}</TableCell>
                   <TableCell>{periodo.fechaFin}</TableCell>
                   <TableCell>
-                    <Button onClick={() => handlePeriodoClick(periodo)} variant="outlined" color="primary">
-                      Ver Detalles
-                    </Button>
+                    <Tooltip title="Ver Detalles">
+                      <IconButton onClick={() => handlePeriodoClick(periodo)}>
+                        <VisibilityIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(periodo)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(periodo.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+
                   </TableCell>
                 </TableRow>
               ))}
@@ -177,15 +225,6 @@ const Periodos: React.FC = () => {
           </Table>
         </TableContainer>
       )}
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={filteredPeriodos.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
 
       {selectedPeriodo && (
         <Box sx={{ width: "100%", mt: 4 }}>
@@ -226,7 +265,7 @@ const Periodos: React.FC = () => {
       )}
 
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-        <DialogTitle>Agregar Nuevo Periodo</DialogTitle>
+        <DialogTitle>{editingPeriodo ? "Editar Periodo" : "Agregar Nuevo Periodo"}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
             <Grid item xs={12}>
@@ -236,8 +275,11 @@ const Periodos: React.FC = () => {
                 label="Nombre"
                 type="text"
                 fullWidth
+                required
                 value={newPeriodo.nombre}
                 onChange={(e) => setNewPeriodo({ ...newPeriodo, nombre: e.target.value })}
+                error={!!nombreError}
+                helperText={nombreError}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -246,9 +288,12 @@ const Periodos: React.FC = () => {
                 label="Fecha de Inicio"
                 type="date"
                 fullWidth
+                required
                 InputLabelProps={{ shrink: true }}
                 value={newPeriodo.fechaInicio}
                 onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaInicio: e.target.value })}
+                error={!!fechaInicioError}
+                helperText={fechaInicioError}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -257,9 +302,12 @@ const Periodos: React.FC = () => {
                 label="Fecha de Fin"
                 type="date"
                 fullWidth
+                required
                 InputLabelProps={{ shrink: true }}
                 value={newPeriodo.fechaFin}
                 onChange={(e) => setNewPeriodo({ ...newPeriodo, fechaFin: e.target.value })}
+                error={!!fechaFinError}
+                helperText={fechaFinError}
               />
             </Grid>
           </Grid>

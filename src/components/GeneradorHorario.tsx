@@ -399,7 +399,6 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
   const renderAccionesClase = (clase: Clase) => (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "flex-end" }}>
-      <Typography variant="caption">Horas restantes: {horasRestantes[clase.materia] || 0}</Typography>
       <Box sx={{ display: "flex", gap: 1 }}>
         <Tooltip title="Editar">
           <IconButton size="small" onClick={() => handleEdit(clase)}>

@@ -33,6 +33,8 @@ import {
   TablePagination,
   InputAdornment,
   FormHelperText,
+  Tooltip,
+  IconButton,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 
@@ -216,12 +218,16 @@ const Asignaturas: React.FC = () => {
                   <Typography variant="body2">Horas Semanales: {asignatura.horasSemanales}</Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" startIcon={<EditIcon />} onClick={() => handleEdit(asignatura)}>
-                    Editar
-                  </Button>
-                  <Button size="small" startIcon={<DeleteIcon />} onClick={() => handleDelete(asignatura.id)}>
-                    Eliminar
-                  </Button>
+                <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(asignaturra)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(asignaturra.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -251,12 +257,16 @@ const Asignaturas: React.FC = () => {
                   <TableCell>{asignatura.trimestres.map((t) => `${t}`).join(", ")}</TableCell>
                   <TableCell>{asignatura.horasSemanales}</TableCell>
                   <TableCell>
-                    <Button startIcon={<EditIcon />} onClick={() => handleEdit(asignatura)}>
-                      Editar
-                    </Button>
-                    <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(asignatura.id)}>
-                      Eliminar
-                    </Button>
+                  <Tooltip title="Editar">
+                      <IconButton onClick={() => handleEdit(asignatura)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(asignatura.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
