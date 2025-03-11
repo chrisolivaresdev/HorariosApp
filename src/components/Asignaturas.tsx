@@ -95,7 +95,7 @@ const Asignaturas: React.FC = () => {
 
   useEffect(() => {
     const filtered = asignaturas.filter((asignatura) =>
-      asignatura.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      asignatura?.name?.toLowerCase().includes(searchTerm?.toLowerCase()),
     )
     setFilteredAsignaturas(filtered)
     setPage(0)
@@ -150,16 +150,22 @@ const Asignaturas: React.FC = () => {
   const handleSave = () => {
     if (validateForm()) {
       if (editingAsignatura) {
-        axiosInstance.patch(`subjects/${editingAsignatura.id}`, newAsignatura)
+        let editAsignatura ={
+          name: newAsignatura.name,
+          subject_type: newAsignatura.subject_type,
+          duration: newAsignatura.duration,
+          journey: newAsignatura.journey,
+          quarters: newAsignatura.quarters,
+          weekly_hours: newAsignatura.weekly_hours,
+        }
+        axiosInstance.patch(`subjects/${editingAsignatura.id}`, editAsignatura)
       .then(response => {
         Swal.fire({
           title: 'Bien!',
           text: 'Asignatura editada correctamente!.',
           icon: 'success',
         });
-      })
-      getSubjects()
-      .catch(error => {
+      }).catch(error => {
         Swal.fire({
           title: '¡Error!',
           text: 'A ocurrido un error.',
@@ -167,12 +173,13 @@ const Asignaturas: React.FC = () => {
         });
         console.error('Error:', error);
       });
+      getSubjects()
       } else {
         axiosInstance.post('/subjects', newAsignatura)
         .then(response => {
           Swal.fire({
             title: 'Bien!',
-            text: 'Asignatura creadoa correctamente!.',
+            text: 'Asignatura creada correctamente!.',
             icon: 'success',
           });
           getSubjects()
@@ -186,10 +193,6 @@ const Asignaturas: React.FC = () => {
           console.error('Error:', error);
         });
       }
-      console.log(
-        "Asignatura guardada:",
-        editingAsignatura ? { ...editingAsignatura, ...newAsignatura } : newAsignatura,
-      )
       handleClose()
     }
   }
@@ -330,7 +333,7 @@ const Asignaturas: React.FC = () => {
               {filteredAsignaturas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((asignatura) => (
                 <TableRow key={asignatura.id}>
                   <TableCell>{asignatura.name}</TableCell>
-                  <TableCell>{asignatura.subject_type}</TableCell>
+                  <TableCell>{asignatura.subject_type == "THEORETICAL" ? "Teórica" : asignatura.subject_type == "PRACTICAL" ? "Practica" : asignatura.subject_type == "THEORETICAL_PRACTICAL" ? "Teorica practica" : ""}</TableCell>
                   <TableCell>{asignatura.duration}</TableCell>
                   <TableCell>{asignatura.journey === "0" ? "Inicial" : asignatura.journey}</TableCell>
                   <TableCell>{asignatura.quarters.map((t) => `${t}`).join(", ")}</TableCell>
@@ -427,7 +430,7 @@ const Asignaturas: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="dense" error={!!errors.quarters}>
-                <InputLabel>trimesters</InputLabel>
+                <InputLabel>Trimestre</InputLabel>
                 <Select
                   multiple
                   value={newAsignatura.quarters}

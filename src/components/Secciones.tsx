@@ -16,85 +16,93 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Grid,
+  Typography,
+  Box,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Grid,
+  useMediaQuery,
+  useTheme,
   Card,
   CardContent,
-  Typography,
   CardActions,
-  Box,
   TablePagination,
   InputAdornment,
   FormHelperText,
-  Tooltip,
   IconButton,
+  Tooltip,
 } from "@mui/material"
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Schedule as ScheduleIcon,
-  Search as SearchIcon,
-} from "@mui/icons-material"
-import GeneradorHorario from "./GeneradorHorario"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
+import axiosInstance from "../axios/axiosInstance"
+import Swal from "sweetalert2"
 
 interface Seccion {
   id: number
-  nombreSeccion: string
-  totalEstudiantes: number
-  trayecto: number
-  trimestre: number
+  name: string
+  total_students: number
+  journey: string
+  quarter: string
 }
 
-interface SeccionesProps {
-  periodoId: number
-  secciones: Seccion[]
-  updateSecciones: (newSecciones: Seccion[]) => void
-  isMobile: boolean
-  profesores?: any[]
-  materias?: any[]
-  aulas?: any[]
-}
+// Opciones para los selectores
+const journeyOptions = ["Trayecto 1", "Trayecto 2", "Trayecto 3", "Trayecto 14"]
+const quarterOptions = ["Trimestre 1", "Trimestre 2", "Trimestre 3", "Trimestre 4"]
 
-const Secciones: React.FC<SeccionesProps> = ({
-  periodoId,
-  secciones,
-  updateSecciones,
-  isMobile,
-  profesores = [],
-  materias = [],
-  aulas = [],
-}) => {
+const Secciones: React.FC = () => {
+  const [secciones, setSecciones] = useState<Seccion[]>([])
+  const [filteredSecciones, setFilteredSecciones] = useState<Seccion[]>([])
   const [open, setOpen] = useState(false)
-  const [openHorario, setOpenHorario] = useState(false)
   const [editingSeccion, setEditingSeccion] = useState<Seccion | null>(null)
-  const [selectedSeccion, setSelectedSeccion] = useState<Seccion | null>(null)
   const [newSeccion, setNewSeccion] = useState<Omit<Seccion, "id">>({
-    nombreSeccion: "",
-    totalEstudiantes: 0,
-    trayecto: 1,
-    trimestre: 1,
+    name: "",
+    total_students: 0,
+    journey: "",
+    quarter: "",
   })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filteredSecciones, setFilteredSecciones] = useState<Seccion[]>(secciones)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
+
   useEffect(() => {
-    const filtered = secciones.filter((seccion) =>
-      seccion.nombreSeccion.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
+    getSecciones()
+  }, [])
+
+  useEffect(() => {
+    const filtered = secciones.filter((seccion) => seccion?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
     setFilteredSecciones(filtered)
     setPage(0)
   }, [searchTerm, secciones])
 
+  const getSecciones = () => {
+    axiosInstance
+      .get("sections")
+      .then((response) => {
+        setSecciones(response.data)
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "Ha ocurrido un error al cargar las secciones.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  }
+
   const handleOpen = () => {
     setEditingSeccion(null)
-    setNewSeccion({ nombreSeccion: "", totalEstudiantes: 0, trayecto: 1, trimestre: 1 })
+    setNewSeccion({
+      name: "",
+      total_students: 0,
+      journey: "",
+      quarter: "",
+    })
     setErrors({})
     setOpen(true)
   }
@@ -104,24 +112,14 @@ const Secciones: React.FC<SeccionesProps> = ({
     setErrors({})
   }
 
-  const handleOpenHorario = (seccion: Seccion) => {
-    setSelectedSeccion(seccion)
-    setOpenHorario(true)
-  }
-
-  const handleCloseHorario = () => {
-    setSelectedSeccion(null)
-    setOpenHorario(false)
-  }
-
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
-    if (!newSeccion.nombreSeccion) newErrors.nombreSeccion = "El nombre de la sección es requerido"
-    if (!newSeccion.totalEstudiantes || newSeccion.totalEstudiantes <= 0) {
-      newErrors.totalEstudiantes = "El total de estudiantes debe ser mayor que 0"
-    }
-    if (newSeccion.trayecto === undefined) newErrors.trayecto = "El trayecto es requerido"
-    if (newSeccion.trimestre === undefined) newErrors.trimestre = "El trimestre es requerido"
+
+    if (!newSeccion.name) newErrors.name = "El nombre de la sección es requerido"
+    if (newSeccion.total_students <= 0) newErrors.total_students = "El número de estudiantes debe ser mayor a 0"
+    if (!newSeccion.journey) newErrors.journey = "La Trayecto es requeridao"
+    if (!newSeccion.quarter) newErrors.quarter = "El trimestre es requerido"
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -129,16 +127,43 @@ const Secciones: React.FC<SeccionesProps> = ({
   const handleSave = () => {
     if (validateForm()) {
       if (editingSeccion) {
-        const updatedSecciones = secciones.map((s) =>
-          s.id === editingSeccion.id ? { ...editingSeccion, ...newSeccion } : s,
-        )
-        updateSecciones(updatedSecciones)
-        console.log(`Sección actualizada en periodo ${periodoId}:`, { ...editingSeccion, ...newSeccion })
+        axiosInstance
+          .patch(`sections/${editingSeccion.id}`, newSeccion)
+          .then((response) => {
+            Swal.fire({
+              title: "¡Bien!",
+              text: "Sección actualizada correctamente.",
+              icon: "success",
+            })
+            getSecciones()
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "Ha ocurrido un error al actualizar la sección.",
+              icon: "error",
+            })
+            console.error("Error:", error)
+          })
       } else {
-        const seccionToAdd = { ...newSeccion, id: Date.now() }
-        const updatedSecciones = [...secciones, seccionToAdd]
-        updateSecciones(updatedSecciones)
-        console.log(`Nueva sección agregada en periodo ${periodoId}:`, seccionToAdd)
+        axiosInstance
+          .post("sections", newSeccion)
+          .then((response) => {
+            Swal.fire({
+              title: "¡Bien!",
+              text: "Sección creada correctamente.",
+              icon: "success",
+            })
+            getSecciones()
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "Ha ocurrido un error al crear la sección.",
+              icon: "error",
+            })
+            console.error("Error:", error)
+          })
       }
       handleClose()
     }
@@ -146,13 +171,43 @@ const Secciones: React.FC<SeccionesProps> = ({
 
   const handleEdit = (seccion: Seccion) => {
     setEditingSeccion(seccion)
-    setNewSeccion({ ...seccion })
-    setErrors({})
+    setNewSeccion({
+      name: seccion.name,
+      total_students: seccion.total_students,
+      journey: seccion.journey,
+      quarter: seccion.quarter,
+    })
     setOpen(true)
   }
 
   const handleDelete = (id: number) => {
-    updateSecciones(secciones.filter((s) => s.id !== id))
+    Swal.fire({
+      title: "¿Estás seguro de eliminar esta sección?",
+      text: "¡No podrás deshacer esta acción!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axiosInstance
+          .delete(`sections/${id}`)
+          .then((response) => {
+            Swal.fire("¡Eliminada!", "La sección ha sido eliminada.", "success")
+            getSecciones()
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "Ha ocurrido un error al eliminar la sección.",
+              icon: "error",
+            })
+            console.error("Error:", error)
+          })
+      }
+    })
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -162,16 +217,6 @@ const Secciones: React.FC<SeccionesProps> = ({
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(Number.parseInt(event.target.value, 10))
     setPage(0)
-  }
-
-  const handleTrayectoChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    const trayectoValue = event.target.value as number
-    setNewSeccion((prev) => ({
-      ...prev,
-      trayecto: trayectoValue,
-      trimestre: trayectoValue === 0 ? 1 : prev.trimestre,
-    }))
-    setErrors((prev) => ({ ...prev, trayecto: "" }))
   }
 
   return (
@@ -201,29 +246,22 @@ const Secciones: React.FC<SeccionesProps> = ({
             <Grid item xs={12} key={seccion.id}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6">{seccion.nombreSeccion}</Typography>
-                  <Typography variant="body2">Estudiantes: {seccion.totalEstudiantes}</Typography>
-                  <Typography variant="body2">
-                    Trayecto: {seccion.trayecto === 0 ? "Inicial" : seccion.trayecto}
-                  </Typography>
-                  <Typography variant="body2">Trimestre: {seccion.trimestre}</Typography>
+                  <Typography variant="h6">{seccion.name}</Typography>
+                  <Typography variant="body2">Estudiantes: {seccion.total_students}</Typography>
+                  <Typography variant="body2">Trayecto: {seccion.journey}</Typography>
+                  <Typography variant="body2">Trimestre: {seccion.quarter}</Typography>
                 </CardContent>
                 <CardActions>
-                   <Tooltip title="Editar">
-                      <IconButton onClick={() => handleEdit(seccion)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Generar Horario">
-                      <IconButton onClick={() => handleOpenHorario(seccion)}>
-                        <ScheduleIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar">
-                      <IconButton onClick={() => handleDelete(seccion.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                  <Tooltip title="Editar">
+                    <IconButton onClick={() => handleEdit(seccion)}>
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar">
+                    <IconButton onClick={() => handleDelete(seccion.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -234,8 +272,8 @@ const Secciones: React.FC<SeccionesProps> = ({
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Nombre de la Sección</TableCell>
-                <TableCell>Total de Estudiantes</TableCell>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Estudiantes</TableCell>
                 <TableCell>Trayecto</TableCell>
                 <TableCell>Trimestre</TableCell>
                 <TableCell>Acciones</TableCell>
@@ -244,27 +282,21 @@ const Secciones: React.FC<SeccionesProps> = ({
             <TableBody>
               {filteredSecciones.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((seccion) => (
                 <TableRow key={seccion.id}>
-                  <TableCell>{seccion.nombreSeccion}</TableCell>
-                  <TableCell>{seccion.totalEstudiantes}</TableCell>
-                  <TableCell>{seccion.trayecto === 0 ? "Inicial" : seccion.trayecto}</TableCell>
-                  <TableCell>{seccion.trimestre}</TableCell>
+                  <TableCell>{seccion.name}</TableCell>
+                  <TableCell>{seccion.total_students}</TableCell>
+                  <TableCell>{seccion.journey}</TableCell>
+                  <TableCell>{seccion.quarter}</TableCell>
                   <TableCell>
                     <Tooltip title="Editar">
-                        <IconButton onClick={() => handleEdit(seccion)}>
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Generar Horario">
-                        <IconButton onClick={() => handleOpenHorario(seccion)}>
-                          <ScheduleIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar">
-                        <IconButton onClick={() => handleDelete(seccion.id)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                     
+                      <IconButton onClick={() => handleEdit(seccion)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton onClick={() => handleDelete(seccion.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -281,107 +313,87 @@ const Secciones: React.FC<SeccionesProps> = ({
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
-
-      {/* Dialog para agregar/editar sección */}
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>{editingSeccion ? "Editar Sección" : "Agregar Nueva Sección"}</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Nombre de la Sección"
-            type="text"
-            fullWidth
-            value={newSeccion.nombreSeccion}
-            onChange={(e) => {
-              setNewSeccion({ ...newSeccion, nombreSeccion: e.target.value })
-              setErrors({ ...errors, nombreSeccion: "" })
-            }}
-            error={!!errors.nombreSeccion}
-            helperText={errors.nombreSeccion}
-          />
-          <TextField
-            margin="dense"
-            label="Total de Estudiantes"
-            type="number"
-            fullWidth
-            value={newSeccion.totalEstudiantes}
-            onChange={(e) => {
-              setNewSeccion({ ...newSeccion, totalEstudiantes: Number(e.target.value) })
-              setErrors({ ...errors, totalEstudiantes: "" })
-            }}
-            error={!!errors.totalEstudiantes}
-            helperText={errors.totalEstudiantes}
-          />
-          <FormControl fullWidth margin="dense" error={!!errors.trayecto}>
-            <InputLabel>Trayecto</InputLabel>
-            <Select value={newSeccion.trayecto} onChange={handleTrayectoChange}>
-              <MenuItem value={0}>Inicial</MenuItem>
-              <MenuItem value={1}>1</MenuItem>
-              <MenuItem value={2}>2</MenuItem>
-              <MenuItem value={3}>Prosecución</MenuItem>
-              <MenuItem value={4}>3</MenuItem>
-              <MenuItem value={5}>4</MenuItem>
-            </Select>
-            {errors.trayecto && <FormHelperText>{errors.trayecto}</FormHelperText>}
-          </FormControl>
-          <FormControl fullWidth margin="dense" error={!!errors.trimestre}>
-            <InputLabel>Trimestre</InputLabel>
-            <Select
-              value={newSeccion.trimestre}
-              onChange={(e) => {
-                setNewSeccion({ ...newSeccion, trimestre: Number(e.target.value) })
-                setErrors({ ...errors, trimestre: "" })
-              }}
-              disabled={newSeccion.trayecto === 0}
-            >
-              <MenuItem value={1}>1</MenuItem>
-              <MenuItem value={2}>2</MenuItem>
-              <MenuItem value={3}>3</MenuItem>
-            </Select>
-            {errors.trimestre && <FormHelperText>{errors.trimestre}</FormHelperText>}
-          </FormControl>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Nombre de la Sección"
+                type="text"
+                fullWidth
+                value={newSeccion.name}
+                onChange={(e) => {
+                  setNewSeccion({ ...newSeccion, name: e.target.value })
+                  setErrors((prev) => ({ ...prev, name: "" }))
+                }}
+                error={!!errors.name}
+                helperText={errors.name}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                margin="dense"
+                label="Número de Estudiantes"
+                type="number"
+                fullWidth
+                value={newSeccion.total_students}
+                onChange={(e) => {
+                  setNewSeccion({ ...newSeccion, total_students: Number.parseInt(e.target.value) || 0 })
+                  setErrors((prev) => ({ ...prev, total_students: "" }))
+                }}
+                error={!!errors.total_students}
+                helperText={errors.total_students}
+                InputProps={{ inputProps: { min: 1 } }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth margin="dense" error={!!errors.journey}>
+                <InputLabel id="journey-label">Trayecto</InputLabel>
+                <Select
+                  labelId="journey-label"
+                  value={newSeccion.journey}
+                  onChange={(e) => {
+                    setNewSeccion({ ...newSeccion, journey: e.target.value as string })
+                    setErrors((prev) => ({ ...prev, journey: "" }))
+                  }}
+                >
+                  {journeyOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth margin="dense" error={!!errors.quarter}>
+                <InputLabel id="quarter-label">Trimestre</InputLabel>
+                <Select
+                  labelId="quarter-label"
+                  value={newSeccion.quarter}
+                  onChange={(e) => {
+                    setNewSeccion({ ...newSeccion, quarter: e.target.value as string })
+                    setErrors((prev) => ({ ...prev, quarter: "" }))
+                  }}
+                >
+                  {quarterOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.quarter && <FormHelperText>{errors.quarter}</FormHelperText>}
+              </FormControl>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog para el generador de horario */}
-      <Dialog
-        open={openHorario}
-        onClose={handleCloseHorario}
-        maxWidth="xl"
-        fullWidth
-        PaperProps={{
-          sx: {
-            height: "90vh",
-          },
-        }}
-      >
-        <DialogTitle>
-          Generar Horario - {selectedSeccion?.nombreSeccion}
-          <Typography variant="subtitle2" color="text.secondary">
-            Trayecto {selectedSeccion?.trayecto === 0 ? "Inicial" : selectedSeccion?.trayecto} - Trimestre{" "}
-            {selectedSeccion?.trimestre}
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {selectedSeccion && (
-              <GeneradorHorario
-                seccionId={selectedSeccion.id}
-                profesores={profesores}
-                materias={materias}
-                aulas={aulas}
-                selectedSeccion={selectedSeccion}
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseHorario}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </>

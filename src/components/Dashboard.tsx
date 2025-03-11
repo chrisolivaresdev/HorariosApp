@@ -37,6 +37,7 @@ import Carreras from "./Carreras"
 import UserManagement from "./UserManagement"
 import { ColorModeContext } from "../App"
 import { MyContext } from '../context/Context';
+import Secciones from "./Secciones"
 
 
 
@@ -60,7 +61,6 @@ const Dashboard = () => {
 
   let menuItems = [
   ]
-  console.log(localStorage.getItem('role'))
   if (localStorage.getItem('role') === "ADMIN") {
     menuItems = [{ text: "User Management", icon: <SupervisorAccount />, path: "/user-management" }]
   }else {
@@ -68,6 +68,7 @@ const Dashboard = () => {
       { text: "Periodos", icon: <Home />, path: "/" },
       { text: "Asignaturas", icon: <Book />, path: "/asignaturas" },
       { text: "Profesores", icon: <Person />, path: "/profesores" },
+      { text: "Secciones", icon: <Person />, path: "/secciones" },
     ]
   }
 
@@ -147,6 +148,7 @@ const Dashboard = () => {
                 <Route path="/asignaturas" element={<Asignaturas />} />
                 <Route path="/profesores" element={<Profesores />} />
                 <Route path="/carreras" element={<Carreras />} />
+                <Route path="/secciones" element={<Secciones />} />
              </>
             }
             

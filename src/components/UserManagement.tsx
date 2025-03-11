@@ -17,8 +17,8 @@ import {
   DialogActions,
   TextField,
   IconButton,
-  Typography,
   TablePagination,
+  Tooltip,
 } from "@mui/material"
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
 import axiosInstance from "../axios/axiosInstance"
@@ -36,6 +36,10 @@ const UserManagement: React.FC = () => {
   const [newUser, setNewUser] = useState<Omit<User, "id">>({ username: "", password: "" })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [errors, setErrors] = useState<{
+    username: string
+    password: string
+  }>({ username: "", password: "" })
 
   useEffect(() => {
     getUsers()
@@ -43,66 +47,93 @@ const UserManagement: React.FC = () => {
 
   const handleOpen = () => {
     setEditingUser(null)
-    setNewUser({ username: "",  password: "" })
+    setNewUser({ username: "", password: "" })
     setOpen(true)
   }
 
-  const handleClose = () => setOpen(false)
+  const handleClose = () => {
+    setOpen(false)
+    setErrors({ username: "", password: "" })
+  }
 
   const getUsers = () => {
-    axiosInstance.get("users")
-      .then(response => {
+    axiosInstance
+      .get("users")
+      .then((response) => {
         setUsers(response.data)
       })
-      .catch(error => {
+      .catch((error) => {
         Swal.fire({
-          title: '¡Error!',
-          text: 'A ocurrido un error.',
-          icon: 'error',
-        });
-        console.error('Error:', error);
-      });
+          title: "¡Error!",
+          text: "A ocurrido un error.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
   }
 
   const handleSave = () => {
-    if (editingUser) {
-      axiosInstance.patch(`users/update/${editingUser.id}`, newUser)
-      .then(response => {
-        Swal.fire({
-          title: 'Bien!',
-          text: 'Usuario editado correctamente!.',
-          icon: 'success',
-        });
-      getUsers()
-      })
-      .catch(error => {
-        Swal.fire({
-          title: '¡Error!',
-          text: 'A ocurrido un error.',
-          icon: 'error',
-        });
-        console.error('Error:', error);
-      });
-    } else {
-      axiosInstance.post('/auth/register', newUser)
-      .then(response => {
-        Swal.fire({
-          title: 'Bien!',
-          text: 'Usuario creado correctamente!.',
-          icon: 'success',
-        });
-      getUsers()
+    // Reset errors
+    setErrors({ username: "", password: "" })
 
-      })
-      .catch(error => {
-        Swal.fire({
-          title: '¡Error!',
-          text: 'A ocurrido un error.',
-          icon: 'error',
-        });
-        console.error('Error:', error);
-      });
-      
+    // Validate fields
+    let isValid = true
+    const newErrors = { username: "", password: "" }
+
+    if (!newUser.username.trim()) {
+      newErrors.username = "El nombre de usuario es obligatorio"
+      isValid = false
+    }
+
+    if (!newUser.password.trim()) {
+      newErrors.password = "La contraseña es obligatoria"
+      isValid = false
+    }
+
+    if (!isValid) {
+      setErrors(newErrors)
+      return
+    }
+
+    // Continue with saving if validation passes
+    if (editingUser) {
+      axiosInstance
+        .patch(`users/update/${editingUser.id}`, newUser)
+        .then((response) => {
+          Swal.fire({
+            title: "Bien!",
+            text: "Usuario editado correctamente!.",
+            icon: "success",
+          })
+          getUsers()
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: "¡Error!",
+            text: "A ocurrido un error.",
+            icon: "error",
+          })
+          console.error("Error:", error)
+        })
+    } else {
+      axiosInstance
+        .post("/auth/register", newUser)
+        .then((response) => {
+          Swal.fire({
+            title: "Bien!",
+            text: "Usuario creado correctamente!.",
+            icon: "success",
+          })
+          getUsers()
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: "¡Error!",
+            text: "A ocurrido un error.",
+            icon: "error",
+          })
+          console.error("Error:", error)
+        })
     }
     handleClose()
   }
@@ -115,35 +146,30 @@ const UserManagement: React.FC = () => {
 
   const handleDelete = (id: number) => {
     Swal.fire({
-      title: '¿Estás seguro de eliminar este usuario?',
-      text: '¡No podrás deshacer esta acción!',
-      icon: 'warning',
+      title: "¿Estás seguro de eliminar este usuario?",
+      text: "¡No podrás deshacer esta acción!",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, eliminalo'
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminalo",
     }).then((result) => {
       if (result.isConfirmed) {
-        axiosInstance.delete(`users/remove/${id}`)
-        .then(response => {
-          Swal.fire(
-            'Eliminado!',
-            'El usuario ha sido borrado.',
-            'success'
-          );
-        })
-        .catch(error => {
-          Swal.fire({
-            title: '¡Error!',
-            text: 'A ocurrido un error.',
-            icon: 'error',
-          });
-          console.error('Error:', error);
-        });
-        
+        axiosInstance
+          .delete(`users/remove/${id}`)
+          .then((response) => {
+            Swal.fire("Eliminado!", "El usuario ha sido borrado.", "success")
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "A ocurrido un error.",
+              icon: "error",
+            })
+            console.error("Error:", error)
+          })
       }
-    });
-   
+    })
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -164,8 +190,8 @@ const UserManagement: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Username</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>Usuario</TableCell>
+              <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -173,12 +199,16 @@ const UserManagement: React.FC = () => {
               <TableRow key={user.id}>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>
-                  <IconButton onClick={() => handleEdit(user)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(user.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+                  <Tooltip title="Editar">
+                    <IconButton onClick={() => handleEdit(user)}>
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar">
+                    <IconButton onClick={() => handleDelete(user.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))}
@@ -195,29 +225,35 @@ const UserManagement: React.FC = () => {
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>{editingUser ? "Editarr usuario" : "Agregar nuevo usuario"}</DialogTitle>
+        <DialogTitle>{editingUser ? "Editar usuario" : "Agregar nuevo usuario"}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label="Username"
+            label="Usuario"
             type="text"
             fullWidth
             value={newUser.username}
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+            error={!!errors.username}
+            helperText={errors.username}
+            required
           />
           <TextField
             margin="dense"
-            label="Password"
+            label="Contraseña"
             type="password"
             fullWidth
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+            error={!!errors.password}
+            helperText={errors.password}
+            required
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
     </div>
