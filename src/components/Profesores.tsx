@@ -53,8 +53,8 @@ interface Profesor {
   lastname: string
   identification: string
   entry_date: string
-  subjectIds: number[]
-  availability: availabilityDia[]
+  subjects: number[]
+  availabilities: availabilityDia[]
 }
 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -75,7 +75,7 @@ while (hora < 19 || (hora === 19 && minutos === 0)) {
 
 const Profesores: React.FC = () => {
   const [profesores, setProfesores] = useState<Profesor[]>([])
-  const [subjectIds, setsubjectIds] = useState([])
+  const [subjects, setsubjectIds] = useState([])
   const [filteredProfesores, setFilteredProfesores] = useState<Profesor[]>([])
   const [open, setOpen] = useState(false)
   const [editingProfesor, setEditingProfesor] = useState<Profesor | null>(null)
@@ -84,8 +84,8 @@ const Profesores: React.FC = () => {
     lastname: "",
     identification: "",
     entry_date: "",
-    subjectIds: [],
-    availability: [],
+    subjects: [],
+    availabilities: [],
   })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
@@ -118,8 +118,8 @@ const Profesores: React.FC = () => {
       lastname: "",
       identification: "",
       entry_date: "",
-      subjectIds: [],
-      availability: [],
+      subjects: [],
+      availabilities: [],
     })
     setErrors({})
     setOpen(true)
@@ -153,11 +153,11 @@ const Profesores: React.FC = () => {
     if (!newProfesor.lastname) newErrors.lastname = "El apellido es requerido"
     if (!newProfesor.identification) newErrors.identification = "El número de identificación es requerido"
     if (!newProfesor.entry_date) newErrors.entry_date = "La fecha de ingreso es requerida"
-    if (newProfesor.subjectIds.length === 0) newErrors.subjectIds = "Debe seleccionar al menos una asignatura"
-    if (newProfesor.availability.length === 0)
-      newErrors.availability = "Debe seleccionar al menos un día de disponibilidad"
+    if (newProfesor.subjects.length === 0) newErrors.subjects = "Debe seleccionar al menos una asignatura"
+    if (newProfesor.availabilities.length === 0)
+      newErrors.availabilities = "Debe seleccionar al menos un día de disponibilidad"
 
-    newProfesor.availability.forEach((d) => {
+    newProfesor.availabilities.forEach((d) => {
       if (!d.start_time || !d.end_time) {
         newErrors[`availability_${d.dayOfWeek}`] = "Debe seleccionar hora de inicio y fin"
       } else if (d.end_time <= d.start_time) {
@@ -272,7 +272,7 @@ const Profesores: React.FC = () => {
   const handleHoraChange = (dayOfWeek: string, tipo: "start_time" | "end_time", valor: string) => {
     setNewProfesor((prev) => ({
       ...prev,
-      availability: prev.availability.map((d) => {
+      availabilities: prev.availabilities.map((d) => {
         if (d.dayOfWeek === dayOfWeek) {
           const [hours, minutes] = valor.split(":").map(Number)
           const date = new Date()
@@ -294,9 +294,9 @@ const Profesores: React.FC = () => {
   const handlesubjectIdsChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     setNewProfesor((prev) => ({
       ...prev,
-      subjectIds: event.target.value as number[],
+      subjects: event.target.value as number[],
     }))
-    setErrors((prev) => ({ ...prev, subjectIds: "" }))
+    setErrors((prev) => ({ ...prev, subjects: "" }))
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -310,15 +310,15 @@ const Profesores: React.FC = () => {
 
   const handleavailabilityChange = (dayOfWeek: string, checked: boolean) => {
     setNewProfesor((prev) => {
-      let updatedAvailability = [...prev.availability]
+      let updatedAvailability = [...prev.availabilities]
       if (checked) {
         updatedAvailability.push({ dayOfWeek, start_time: "", end_time: "" })
       } else {
         updatedAvailability = updatedAvailability.filter((d) => d.dayOfWeek !== dayOfWeek)
       }
-      return { ...prev, availability: updatedAvailability }
+      return { ...prev, availabilities: updatedAvailability }
     })
-    setErrors((prev) => ({ ...prev, availability: "" }))
+    setErrors((prev) => ({ ...prev, availabilities: "" }))
   }
 
 
@@ -355,7 +355,7 @@ const Profesores: React.FC = () => {
                   <Typography variant="body2">ID: {profesor.identification}</Typography>
                   <Typography variant="body2">Ingreso: {profesor.entry_date}</Typography>
                   <Typography variant="body2">
-                    subjectIds: {profesor.subjectIds.map((a) => `Asignatura ${a}`).join(", ")}
+                    Asignaturas: {profesor.subjects.map((a) => `Asignatura ${a}`).join(", ")}
                   </Typography>
                 </CardContent>
                 <CardActions>
@@ -396,7 +396,7 @@ const Profesores: React.FC = () => {
                     {profesor.subjects.map((asignatura) => (
                       <Chip
                         key={asignatura.id}
-                        label={subjectIds?.find((asig) => asig.id === asignatura.id)?.name}
+                        label={subjects?.find((asig) => asig.id === asignatura.id)?.name}
                         sx={{ m: 0.5 }}
                       />
                     ))}
@@ -495,35 +495,35 @@ const Profesores: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="dense" error={!!errors.subjectIds}>
-                <InputLabel id="subjectIds-label">subjectIds</InputLabel>
+              <FormControl fullWidth margin="dense" error={!!errors.subjects}>
+                <InputLabel id="subjects-label">Asignaturas</InputLabel>
                 <Select
-                  labelId="subjectIds-label"
+                  labelId="subjects-label"
                   multiple
-                  value={newProfesor.subjectIds}
+                  value={newProfesor.subjects}
                   onChange={handlesubjectIdsChange}
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       {(selected as number[]).map((value) => (
-                        <Chip key={value} label={subjectIds.find((asignatura) => asignatura.id === value).name} />
+                        <Chip key={value} label={subjects.find((asignatura) => asignatura.id === value)?.name} />
                       ))}
                     </Box>
                   )}
                 >
-                  {subjectIds.map((asignatura) => (
+                  {subjects.map((asignatura) => (
                     <MenuItem key={asignatura.id} value={asignatura.id}>
                       {asignatura.name}
                     </MenuItem>
                   ))}
                 </Select>
-                {errors.subjectIds && <FormHelperText>{errors.subjectIds}</FormHelperText>}
+                {errors.subjects && <FormHelperText>{errors.subjects}</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
             Disponibilidad
           </Typography>
-          {errors.availability && <FormHelperText error>{errors.availability}</FormHelperText>}
+          {errors.availabilities && <FormHelperText error>{errors.availabilities}</FormHelperText>}
           <Grid container spacing={2}>
             {diasSemana.map((dayOfWeek) => (
               <Grid item xs={12} sm={6} md={4} key={dayOfWeek}>
@@ -531,21 +531,21 @@ const Profesores: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Checkbox
-                        checked={newProfesor.availability.some((d) => d.dayOfWeek === dayOfWeek)}
+                        checked={newProfesor.availabilities.some((d) => d.dayOfWeek === dayOfWeek)}
                         onChange={(e) => handleavailabilityChange(dayOfWeek, e.target.checked)}
                       />
                     }
                     label={dayOfWeek}
                   />
-                  {newProfesor.availability.some((d) => d.dayOfWeek === dayOfWeek) && (
+                  {newProfesor.availabilities.some((d) => d.dayOfWeek === dayOfWeek) && (
                     <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
                       <FormControl fullWidth error={!!errors[`availability_${dayOfWeek}`]}>
                         <InputLabel>Hora de inicio</InputLabel>
                         <Select
                           value={
-                            newProfesor.availability.find((d) => d.dayOfWeek === dayOfWeek)?.start_time
+                            newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time
                               ? new Date(
-                                  newProfesor.availability.find((d) => d.dayOfWeek === dayOfWeek)!.start_time,
+                                  newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)!.start_time,
                                 ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
                               : ""
                           }
@@ -562,9 +562,9 @@ const Profesores: React.FC = () => {
                         <InputLabel>Hora de fin</InputLabel>
                         <Select
                           value={
-                            newProfesor.availability.find((d) => d.dayOfWeek === dayOfWeek)?.end_time
+                            newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.end_time
                               ? new Date(
-                                  newProfesor.availability.find((d) => d.dayOfWeek === dayOfWeek)!.end_time,
+                                  newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)!.end_time,
                                 ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
                               : ""
                           }
@@ -572,7 +572,7 @@ const Profesores: React.FC = () => {
                         >
                           {horas
                             .filter((hora) => {
-                              const startTime = newProfesor.availability.find(
+                              const startTime = newProfesor.availabilities.find(
                                 (d) => d.dayOfWeek === dayOfWeek,
                               )?.start_time
                               return startTime
