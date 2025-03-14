@@ -47,8 +47,8 @@ interface Seccion {
 }
 
 // Opciones para los selectores
-const journeyOptions = ["Trayecto 1", "Trayecto 2", "Trayecto 3", "Trayecto 14"]
-const quarterOptions = ["Trimestre 1", "Trimestre 2", "Trimestre 3", "Trimestre 4"]
+const journeyOptions = ["1", "2", "3", "4"]
+const quarterOptions = ["1", "2", "3", ""]
 
 const Secciones: React.FC = () => {
   const [secciones, setSecciones] = useState<Seccion[]>([])
@@ -358,13 +358,13 @@ const Secciones: React.FC = () => {
                   onChange={(e) => {
                     setNewSeccion({ ...newSeccion, journey: e.target.value as string })
                     setErrors((prev) => ({ ...prev, journey: "" }))
-                  }}
-                >
-                  {journeyOptions.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
+                  }}>
+                      <MenuItem value={"0"}>Inicial</MenuItem>
+                      <MenuItem value={"1"}>1</MenuItem>
+                      <MenuItem value={"2"}>2</MenuItem>
+                      <MenuItem value={"3"}>Prosecución</MenuItem>
+                      <MenuItem value={"4"}>3</MenuItem>
+                      <MenuItem value={"5"}>4</MenuItem>
                 </Select>
                 {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
               </FormControl>
@@ -380,11 +380,9 @@ const Secciones: React.FC = () => {
                     setErrors((prev) => ({ ...prev, quarter: "" }))
                   }}
                 >
-                  {quarterOptions.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
+                    <MenuItem value={"1"}>1</MenuItem>
+                    <MenuItem value={"2"}>2</MenuItem>
+                    <MenuItem value={"3"}>3</MenuItem>
                 </Select>
                 {errors.quarter && <FormHelperText>{errors.quarter}</FormHelperText>}
               </FormControl>

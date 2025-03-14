@@ -484,23 +484,35 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     <Box sx={{ width: "100%", overflowX: "auto" }}>
       <style>{printStyles}</style>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleClickOpen}>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleClickOpen} size="small">
           Agregar Clase
         </Button>
-        <Button variant="contained" color="secondary" startIcon={<DownloadIcon />} onClick={handleDownloadPDF}>
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<DownloadIcon />}
+          onClick={handleDownloadPDF}
+          size="small"
+        >
           Descargar PDF
         </Button>
-        <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleGuardarHorario}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<SaveIcon />}
+          onClick={handleGuardarHorario}
+          size="small"
+        >
           Guardar Horario
         </Button>
       </Box>
 
-      <Box ref={horarioRef}>
+      <Box ref={horarioRef} sx={{ maxWidth: "1000px", margin: "0 auto" }}>
         <Box sx={{ mb: 2, textAlign: "center" }}>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ fontSize: "1rem" }}>
             {selectedSeccion?.nombreSeccion}
           </Typography>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
             Trayecto {selectedSeccion?.trayecto === 0 ? "Inicial" : selectedSeccion?.trayecto} - Trimestre{" "}
             {selectedSeccion?.trimestre}
           </Typography>
@@ -510,8 +522,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
           // Vista móvil: horario por día
           <Box sx={{ mb: 2 }}>
             {dias.map((dia, index) => (
-              <Paper key={dia} sx={{ mb: 2, p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+              <Paper key={dia} sx={{ mb: 2, p: 1 }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ fontSize: "0.9rem" }}>
                   {dia}
                 </Typography>
                 {horas.map((hora) => {
@@ -528,12 +540,18 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                       >
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <Box>
-                            <Typography variant="subtitle2">
+                            <Typography variant="subtitle2" sx={{ fontSize: "0.8rem" }}>
                               {clase.horaInicio} - {clase.horaFin}
                             </Typography>
-                            <Typography variant="body2">{clase.materia}</Typography>
-                            <Typography variant="body2">Prof: {clase.profesor}</Typography>
-                            <Typography variant="body2">Aula: {clase.aula}</Typography>
+                            <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
+                              {clase.materia}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
+                              Prof: {clase.profesor}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
+                              Aula: {clase.aula}
+                            </Typography>
                           </Box>
                           {renderAccionesClase(clase)}
                         </Box>
@@ -546,14 +564,22 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
             ))}
           </Box>
         ) : (
-          // Vista desktop: tabla completa
-          <TableContainer component={Paper}>
+          // Vista desktop: tabla compacta
+          <TableContainer component={Paper} sx={{ maxWidth: "1000px" }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Hora</TableCell>
+                  <TableCell sx={{ padding: "4px 8px", fontSize: "0.75rem", width: "60px" }}>Hora</TableCell>
                   {dias.map((dia) => (
-                    <TableCell key={dia} sx={{ borderLeft: "1px solid rgba(224, 224, 224, 1)" }}>
+                    <TableCell
+                      key={dia}
+                      sx={{
+                        borderLeft: "1px solid rgba(224, 224, 224, 1)",
+                        padding: "4px 8px",
+                        fontSize: "0.75rem",
+                        width: "135px",
+                      }}
+                    >
                       {dia}
                     </TableCell>
                   ))}
@@ -562,7 +588,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
               <TableBody>
                 {horas.map((hora) => (
                   <TableRow key={hora}>
-                    <TableCell>{hora}</TableCell>
+                    <TableCell sx={{ padding: "4px 8px", fontSize: "0.75rem" }}>{hora}</TableCell>
                     {dias.map((dia, index) => {
                       const clase = encontrarClase(hora, index)
                       return (
@@ -570,8 +596,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                           key={`${dia}-${hora}`}
                           sx={{
                             backgroundColor: clase?.color,
-                            minWidth: "180px",
-                            height: "100px",
+                            height: "60px",
+                            padding: "2px 4px",
                             borderLeft: "1px solid rgba(224, 224, 224, 1)",
                             ...(clase && {
                               borderBottom: "none",
@@ -579,17 +605,17 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                           }}
                         >
                           {clase && hora === clase.horaInicio && (
-                            <Box className="clase-content">
+                            <Box className="clase-content" sx={{ padding: "2px" }}>
                               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                <Typography variant="subtitle1" sx={{ fontSize: "1.1rem", fontWeight: "bold" }}>
+                                <Typography variant="subtitle1" sx={{ fontSize: "0.8rem", fontWeight: "bold" }}>
                                   {clase.materia}
                                 </Typography>
                                 {!isPrinting && renderAccionesClase(clase)}
                               </Box>
-                              <Typography variant="body1" sx={{ fontSize: "0.9rem" }}>
+                              <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
                                 Prof: {clase.profesor}
                               </Typography>
-                              <Typography variant="body1" sx={{ fontSize: "0.9rem" }}>
+                              <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
                                 Aula: {clase.aula}
                               </Typography>
                             </Box>

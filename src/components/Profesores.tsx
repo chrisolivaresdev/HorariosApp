@@ -72,7 +72,6 @@ while (hora < 19 || (hora === 19 && minutos === 0)) {
   }
 }
 
-
 const Profesores: React.FC = () => {
   const [profesores, setProfesores] = useState<Profesor[]>([])
   const [subjects, setsubjectIds] = useState([])
@@ -235,7 +234,25 @@ const Profesores: React.FC = () => {
 
   const handleEdit = (profesor: Profesor) => {
     setEditingProfesor(profesor)
-    setNewProfesor({ ...profesor })
+
+    // Transform the subjects array to match what the Select component expects
+    let subjectIds = []
+
+    if (Array.isArray(profesor.subjects)) {
+      subjectIds = profesor.subjects.map((subject) => {
+        // Handle both object format and direct ID format
+        if (typeof subject === "object") {
+          return subject.id || subject.subjectId
+        }
+        return subject
+      })
+    }
+
+    setNewProfesor({
+      ...profesor,
+      entry_date: new Date(profesor.entry_date).toISOString().split("T")[0],
+      subjects: subjectIds,
+    })
     setOpen(true)
   }
 
@@ -321,9 +338,6 @@ const Profesores: React.FC = () => {
     setErrors((prev) => ({ ...prev, availabilities: "" }))
   }
 
-
-
-
   return (
     <>
       <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -355,7 +369,14 @@ const Profesores: React.FC = () => {
                   <Typography variant="body2">ID: {profesor.identification}</Typography>
                   <Typography variant="body2">Ingreso: {profesor.entry_date}</Typography>
                   <Typography variant="body2">
-                    Asignaturas: {profesor.subjects.map((a) => `Asignatura ${a}`).join(", ")}
+                    Asignaturas:{" "}
+                    {profesor.subjects
+                      .map((a) => {
+                        const subjectId = typeof a === "object" && a.subjectId ? a.subjectId : a
+                        const subject = subjects.find((s) => s.id === subjectId)
+                        return subject ? subject.name : `Asignatura ${subjectId}`
+                      })
+                      .join(", ")}
                   </Typography>
                 </CardContent>
                 <CardActions>
@@ -391,15 +412,28 @@ const Profesores: React.FC = () => {
                 <TableRow key={profesor.id}>
                   <TableCell>{`${profesor.firstname} ${profesor.lastname}`}</TableCell>
                   <TableCell>{profesor.identification}</TableCell>
-                  <TableCell>{new Date(profesor.entry_date).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</TableCell>
                   <TableCell>
-                    {profesor.subjects.map((asignatura) => (
-                      <Chip
-                        key={asignatura.id}
-                        label={subjects?.find((asig) => asig.id === asignatura.id)?.name}
-                        sx={{ m: 0.5 }}
-                      />
-                    ))}
+                    {new Date(profesor.entry_date).toLocaleDateString("es-ES", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    {profesor.subjects.map((asignatura) => {
+                      // Extract the subject ID correctly whether it's an object or direct ID
+                      const subjectId =
+                        typeof asignatura === "object" && asignatura.subjectId ? asignatura.subjectId : asignatura
+                      // Find the corresponding subject from the subjects array
+                      const subject = subjects.find((s) => s.id === subjectId)
+                      return (
+                        <Chip
+                          key={subjectId}
+                          label={subject ? subject.name : `Asignatura ${subjectId}`}
+                          sx={{ m: 0.5 }}
+                        />
+                      )
+                    })}
                   </TableCell>
                   <TableCell>
                     <Tooltip title="Editar">
@@ -485,7 +519,7 @@ const Profesores: React.FC = () => {
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
-                value={newProfesor.entry_date}
+                value={newProfesor.entry_date ? new Date(newProfesor.entry_date).toISOString().split("T")[0] : ""}
                 onChange={(e) => {
                   setNewProfesor({ ...newProfesor, entry_date: e.target.value })
                   setErrors((prev) => ({ ...prev, entry_date: "" }))
@@ -504,15 +538,16 @@ const Profesores: React.FC = () => {
                   onChange={handlesubjectIdsChange}
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {(selected as number[]).map((value) => (
-                        <Chip key={value} label={subjects.find((asignatura) => asignatura.id === value)?.name} />
-                      ))}
+                      {(selected as number[]).map((value) => {
+                        const subject = subjects.find((s) => s.id === value)
+                        return <Chip key={value} label={subject ? subject.name : `Asignatura ${value}`} />
+                      })}
                     </Box>
                   )}
                 >
-                  {subjects.map((asignatura) => (
-                    <MenuItem key={asignatura.id} value={asignatura.id}>
-                      {asignatura.name}
+                  {subjects.map((subject) => (
+                    <MenuItem key={subject.id} value={subject.id}>
+                      {subject.name}
                     </MenuItem>
                   ))}
                 </Select>

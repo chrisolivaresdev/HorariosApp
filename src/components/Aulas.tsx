@@ -33,44 +33,67 @@ import {
   IconButton,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
+import Swal from "sweetalert2"
+import axiosInstance from "../axios/axiosInstance"
 
 interface Aula {
-  id: number
-  nombreAula: string
-  tipoAula: string
-  capacidadMaxima: number
+  id:   string,
+  name: string
+  type: string
+  max_capacity: number
 }
 
 interface AulasProps {
-  periodoId: number
+  periodId: number
   aulas: Aula[]
-  updateAulas: (newAulas: Aula[]) => void
+  setAula: () => void
   isMobile: boolean
 }
 
-const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }) => {
+const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => {
   const [open, setOpen] = useState(false)
   const [editingAula, setEditingAula] = useState<Aula | null>(null)
   const [newAula, setNewAula] = useState<Omit<Aula, "id">>({
-    nombreAula: "",
-    tipoAula: "",
-    capacidadMaxima: 0,
+    name: "",
+    type: "",
+    max_capacity: 0,
   })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredAulas, setFilteredAulas] = useState<Aula[]>(aulas)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-
   useEffect(() => {
-    const filtered = aulas.filter((aula) => aula.nombreAula.toLowerCase().includes(searchTerm.toLowerCase()))
+    console.log(aulas)
+    const filtered = aulas?.filter((aula) => aula.name.toLowerCase().includes(searchTerm.toLowerCase()))
     setFilteredAulas(filtered)
     setPage(0)
   }, [searchTerm, aulas])
 
+  const getClassrooms = () => {
+    axiosInstance
+      .get(`classrooms/find-by-period/${periodId}`)
+      .then((response) => {
+        setAula(response.data)
+        console.log(response.data)
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "A ocurrido un error.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  }
+
+  useEffect(() => {
+    getClassrooms()
+  }, [periodId])
+
   const handleOpen = () => {
     setEditingAula(null)
-    setNewAula({ nombreAula: "", tipoAula: "", capacidadMaxima: 0 })
+    setNewAula({ name: "", type: "", max_capacity: 0 })
     setErrors({})
     setOpen(true)
   }
@@ -82,10 +105,10 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
-    if (!newAula.nombreAula) newErrors.nombreAula = "El nombre del aula es requerido"
-    if (!newAula.tipoAula) newErrors.tipoAula = "El tipo de aula es requerido"
-    if (!newAula.capacidadMaxima || newAula.capacidadMaxima <= 0) {
-      newErrors.capacidadMaxima = "La capacidad máxima debe ser mayor que 0"
+    if (!newAula.name) newErrors.name = "El nombre del aula es requerido"
+    if (!newAula.type) newErrors.type = "El tipo de aula es requerido"
+    if (!newAula.max_capacity || newAula.max_capacity <= 0) {
+      newErrors.max_capacity = "La capacidad máxima debe ser mayor que 0"
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -94,14 +117,47 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
   const handleSave = () => {
     if (validateForm()) {
       if (editingAula) {
-        const updatedAulas = aulas.map((a) => (a.id === editingAula.id ? { ...editingAula, ...newAula } : a))
-        updateAulas(updatedAulas)
-        console.log(`Aula actualizada en periodo ${periodoId}:`, { ...editingAula, ...newAula })
+        const aulaToAdd = { name: newAula.name, type: newAula.type, max_capacity: newAula.max_capacity }
+        axiosInstance
+        .patch(`classrooms/${editingAula.id}`, aulaToAdd)
+        .then((response) => {
+          Swal.fire({
+            title: "¡Bien!",
+            text: "Aula actualizado correctamente.",
+            icon: "success",
+          })
+          getClassrooms()
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: "¡Error!",
+            text: "Ha ocurrido un error al actualizar el aula.",
+            icon: "error",
+          })
+          console.error("Error:", error)
+        })
+   
       } else {
-        const aulaToAdd = { ...newAula, id: Date.now() }
-        const updatedAulas = [...aulas, aulaToAdd]
-        updateAulas(updatedAulas)
-        console.log(`Nueva aula agregada en periodo ${periodoId}:`, aulaToAdd)
+        console.log(periodId)
+        const aulaToAdd = { ...newAula, periodId }
+        axiosInstance
+        .post("classrooms", aulaToAdd)
+        .then((response) => {
+          Swal.fire({
+            title: "¡Bien!",
+            text: "Aula creada correctamente.",
+            icon: "success",
+          })
+          getClassrooms()
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: "¡Error!",
+            text: "Ha ocurrido un error al crear el aula.",
+            icon: "error",
+          })
+          console.error("Error:", error)
+        })
       }
       handleClose()
     }
@@ -115,7 +171,32 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
   }
 
   const handleDelete = (id: number) => {
-    updateAulas(aulas.filter((a) => a.id !== id))
+    Swal.fire({
+      title: "¿Estás seguro de eliminar esta aula?",
+      text: "¡No podrás deshacer esta acción!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminalo",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axiosInstance
+          .delete(`/classrooms/${id}`)
+          .then((response) => {
+            Swal.fire("Eliminado!", "El aula ha sido eliminado.", "success")
+            getClassrooms()
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "A ocurrido un error.",
+              icon: "error",
+            })
+            console.error("Error:", error)
+          })
+      }
+    })
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -154,9 +235,9 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
             <Grid item xs={12} key={aula.id}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6">{aula.nombreAula}</Typography>
-                  <Typography variant="body2">Tipo: {aula.tipoAula}</Typography>
-                  <Typography variant="body2">Capacidad: {aula.capacidadMaxima}</Typography>
+                  <Typography variant="h6">{aula.name}</Typography>
+                  <Typography variant="body2">Tipo: {aula.type}</Typography>
+                  <Typography variant="body2">Capacidad: {aula.max_capacity}</Typography>
                 </CardContent>
                 <CardActions>
                      <Tooltip title="Editar">
@@ -175,7 +256,7 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
           ))}
         </Grid>
       ) : (
-        <TableContainer component={Paper}>
+          <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -188,9 +269,9 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
             <TableBody>
               {filteredAulas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((aula) => (
                 <TableRow key={aula.id}>
-                  <TableCell>{aula.nombreAula}</TableCell>
-                  <TableCell>{aula.tipoAula}</TableCell>
-                  <TableCell>{aula.capacidadMaxima}</TableCell>
+                  <TableCell>{aula.name}</TableCell>
+                  <TableCell>{aula.type}</TableCell>
+                  <TableCell>{aula.max_capacity}</TableCell>
                   <TableCell>
                   <Tooltip title="Editar">
                       <IconButton onClick={() => handleEdit(aula)}>
@@ -227,40 +308,40 @@ const Aulas: React.FC<AulasProps> = ({ periodoId, aulas, updateAulas, isMobile }
             label="Nombre del Aula"
             type="text"
             fullWidth
-            value={newAula.nombreAula}
+            value={newAula.name}
             onChange={(e) => {
-              setNewAula({ ...newAula, nombreAula: e.target.value })
-              setErrors({ ...errors, nombreAula: "" })
+              setNewAula({ ...newAula, name: e.target.value })
+              setErrors({ ...errors, name: "" })
             }}
-            error={!!errors.nombreAula}
-            helperText={errors.nombreAula}
+            error={!!errors.name}
+            helperText={errors.name}
           />
-          <FormControl fullWidth margin="dense" error={!!errors.tipoAula}>
+          <FormControl fullWidth margin="dense" error={!!errors.type}>
             <InputLabel>Tipo de Aula</InputLabel>
             <Select
-              value={newAula.tipoAula}
+              value={newAula.type}
               onChange={(e) => {
-                setNewAula({ ...newAula, tipoAula: e.target.value as string })
-                setErrors({ ...errors, tipoAula: "" })
+                setNewAula({ ...newAula, type: e.target.value as string })
+                setErrors({ ...errors, type: "" })
               }}
             >
               <MenuItem value="Teórica">Teórica</MenuItem>
               <MenuItem value="Laboratorio">Laboratorio</MenuItem>
             </Select>
-            {errors.tipoAula && <FormHelperText>{errors.tipoAula}</FormHelperText>}
+            {errors.type && <FormHelperText>{errors.type}</FormHelperText>}
           </FormControl>
           <TextField
             margin="dense"
             label="Capacidad Máxima"
             type="number"
             fullWidth
-            value={newAula.capacidadMaxima}
+            value={newAula.max_capacity}
             onChange={(e) => {
-              setNewAula({ ...newAula, capacidadMaxima: Number(e.target.value) })
-              setErrors({ ...errors, capacidadMaxima: "" })
+              setNewAula({ ...newAula, max_capacity: Number(e.target.value) })
+              setErrors({ ...errors, max_capacity: "" })
             }}
-            error={!!errors.capacidadMaxima}
-            helperText={errors.capacidadMaxima}
+            error={!!errors.max_capacity}
+            helperText={errors.max_capacity}
           />
         </DialogContent>
         <DialogActions>
