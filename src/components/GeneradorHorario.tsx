@@ -38,6 +38,8 @@ import {
 } from "@mui/icons-material"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
+import Swal from "sweetalert2"
+import axiosInstance from "../axios/axiosInstance"
 
 interface Clase {
   id: string
@@ -59,7 +61,7 @@ interface Profesor {
 interface Asignatura {
   id: number
   nombre: string
-  horasSemanales: number
+  weekly_hours: number
 }
 
 interface Aula {
@@ -71,28 +73,24 @@ interface Aula {
 interface GeneradorHorarioProps {
   seccionId: number
   selectedSeccion: any
+  periodId: any
 }
 
-const profesoresPorDefecto: Profesor[] = [
-  { id: 1, nombre: "Juan Pérez" },
-  { id: 2, nombre: "María García" },
-  { id: 3, nombre: "Carlos Rodríguez" },
-]
-
-const asignaturasPorDefecto: Asignatura[] = [
-  { id: 1, nombre: "Matemáticas", horasSemanales: 6 },
-  { id: 2, nombre: "Física", horasSemanales: 4 },
-  { id: 3, nombre: "Química", horasSemanales: 4 },
-  { id: 4, nombre: "Historia", horasSemanales: 3 },
-]
+interface HorasExtras {
+  dia: number
+  horaInicio: string
+  horaFin: string
+  horasAsignadas: number
+  aula?: string
+}
 
 const aulasPorDefecto: Aula[] = [
-  { id: 1, nombre: "Aula 101", capacidad: 30 },
-  { id: 2, nombre: "Aula 102", capacidad: 25 },
-  { id: 3, nombre: "Laboratorio", capacidad: 20 },
+  { id: 1, name: "Aula 101", max_capacity: 30 },
+  { id: 2, name: "Aula 102", max_capacity: 25 },
+  { id: 3, name: "Laboratorio", max_capacity: 20 },
 ]
 
-const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selectedSeccion }) => {
+const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selectedSeccion, periodId }) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("md"))
   const [open, setOpen] = useState(false)
@@ -111,19 +109,86 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   })
   const [isPrinting, setIsPrinting] = useState(false)
   const [horasRestantes, setHorasRestantes] = useState<{ [key: string]: number }>({})
-  const [horasExtras, setHorasExtras] = useState<Omit<Clase, "id" | "materia" | "profesor" | "aula"> | null>(null)
+  const [horasExtras, setHorasExtras] = useState<HorasExtras | null>(null)
   const [claseOriginal, setClaseOriginal] = useState<Clase | null>(null)
   const [createdSubjects, setCreatedSubjects] = useState<string[]>([])
+  const [teachers, setteachers] = useState([])
+  const [subjects, setsubjects] = useState([])
+  const [classrooms, setclassrooms] = useState([])
 
   const horarioRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const horasInicialesRestantes: { [key: string]: number } = {}
-    asignaturasPorDefecto.forEach((asignatura) => {
-      horasInicialesRestantes[asignatura.nombre] = asignatura.horasSemanales
+    subjects.forEach((asignatura) => {
+      horasInicialesRestantes[asignatura.name] = asignatura.weekly_hours
     })
     setHorasRestantes(horasInicialesRestantes)
+  }, [subjects])
+
+  useEffect(() => {
+    getTeachers()
   }, [])
+
+  useEffect(() => {
+    getClassrooms(periodId)
+  }, [periodId])
+
+  useEffect(() => {
+    getSubjects()
+  }, [])
+
+  const getTeachers = () => {
+    axiosInstance
+      .get("teachers")
+      .then((response) => {
+        setteachers(response.data)
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "A ocurrido un error.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  }
+
+  const getClassrooms = (periodId: any) => {
+    axiosInstance
+      .get(`classrooms/find-by-period/${periodId}`)
+      .then((response) => {
+        setclassrooms(response.data)
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "A ocurrido un error.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  }
+
+  const getSubjects = () => {
+    axiosInstance
+      .get("subjects")
+      .then((response) => {
+        const subjects = response.data.map((subject) => ({
+          ...subject,
+          weekly_hours: Number.parseInt(subject.weekly_hours, 10),
+        }))
+        setsubjects(subjects)
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "Ha ocurrido un error.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  }
 
   // Generar rangos de horas
   const horas = []
@@ -189,8 +254,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     // Reset hours for the subject being edited
     setHorasRestantes((prev) => ({
       ...prev,
-      [clase.materia]:
-        asignaturasPorDefecto.find((asignatura) => asignatura.nombre === clase.materia)?.horasSemanales || 0,
+      [clase.materia]: subjects.find((asignatura) => asignatura.name === clase.materia)?.weekly_hours || 0,
     }))
 
     // Find extra hours associated with this subject
@@ -202,6 +266,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
         horaInicio: horasExtrasAsociadas.horaInicio,
         horaFin: horasExtrasAsociadas.horaFin,
         horasAsignadas: horasExtrasAsociadas.horasAsignadas,
+        aula: horasExtrasAsociadas.aula,
       })
     } else {
       setHorasExtras(null)
@@ -215,12 +280,18 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     if (claseAEliminar) {
       // Remove all classes of the same subject
       const clasesEliminadas = clases.filter((clase) => clase.materia === claseAEliminar.materia)
-      const horasAsignadasTotales = clasesEliminadas.reduce((total, clase) => total + clase.horasAsignadas, 0)
 
-      setHorasRestantes((prev) => ({
-        ...prev,
-        [claseAEliminar.materia]: (prev[claseAEliminar.materia] || 0) + horasAsignadasTotales,
-      }))
+      // Restablecer las horas disponibles para la materia eliminada
+      setHorasRestantes((prev) => {
+        // Buscar las horas semanales originales de la materia
+        const horasOriginales =
+          subjects.find((asignatura) => asignatura.name === claseAEliminar.materia)?.weekly_hours || 0
+
+        return {
+          ...prev,
+          [claseAEliminar.materia]: horasOriginales,
+        }
+      })
 
       setClases(clases.filter((clase) => clase.materia !== claseAEliminar.materia))
       setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.materia))
@@ -269,6 +340,12 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
     // Check overlap with extra hours
     if (horasExtras) {
+      if (!horasExtras.aula) {
+        setWarningMessage("Debe seleccionar un aula para las horas extras.")
+        setOpenWarning(true)
+        return
+      }
+
       const mainClassOverlap = checkOverlap(
         nuevaClase.dia,
         nuevaClase.horaInicio,
@@ -301,7 +378,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     const horasExtrasAsignadas = horasExtras ? calcularHorasAsignadas(horasExtras.horaInicio, horasExtras.horaFin) : 0
     const totalHorasAsignadas = horasAsignadas + horasExtrasAsignadas
     const horasDisponibles = editingClase
-      ? asignaturasPorDefecto.find((asignatura) => asignatura.nombre === nuevaClase.materia)?.horasSemanales || 0
+      ? subjects.find((asignatura) => asignatura.name === nuevaClase.materia)?.weekly_hours || 0
       : horasRestantes[nuevaClase.materia] || 0
 
     if (totalHorasAsignadas < horasDisponibles) {
@@ -339,7 +416,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           profesor: nuevaClase.profesor,
           materia: nuevaClase.materia,
-          aula: nuevaClase.aula,
+          aula: horasExtras.aula || nuevaClase.aula, // Usar el aula específica de las horas extras
           color: nuevaClaseConHoras.color,
           horasAsignadas: calcularHorasAsignadas(horasExtras.horaInicio, horasExtras.horaFin),
         }
@@ -461,7 +538,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
   const handleAddHorasExtras = () => {
     if (!horasExtras) {
-      setHorasExtras({ dia: 0, horaInicio: "", horaFin: "", horasAsignadas: 0 })
+      setHorasExtras({ dia: 0, horaInicio: "", horaFin: "", horasAsignadas: 0, aula: "" })
     }
   }
 
@@ -547,7 +624,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                               {clase.materia}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
-                              Prof: {clase.profesor}
+                              Prof: {teachers.find( teacher => teacher.id == clase.profesor).firstname + " " + teachers.find( teacher => teacher.id == clase.profesor).lastname}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
                               Aula: {clase.aula}
@@ -613,10 +690,13 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                                 {!isPrinting && renderAccionesClase(clase)}
                               </Box>
                               <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                                Prof: {clase.profesor}
+                              Prof: {teachers.find( teacher => teacher.id == clase.profesor).firstname + " " + teachers.find( teacher => teacher.id == clase.profesor).lastname}
                               </Typography>
                               <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                                Aula: {clase.aula}
+                                Aula: {classrooms.find(classroom => classroom.id == clase.aula).name}
+                              </Typography>
+                              <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
+                              Tipo: {classrooms.find(classroom => classroom.id == clase.aula).type}
                               </Typography>
                             </Box>
                           )}
@@ -642,11 +722,11 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                   value={nuevaClase.materia}
                   onChange={(e) => setNuevaClase({ ...nuevaClase, materia: e.target.value as string })}
                 >
-                  {asignaturasPorDefecto
-                    .filter((asignatura) => !createdSubjects.includes(asignatura.nombre) || editingClase)
+                  {subjects
+                    .filter((asignatura) => !createdSubjects.includes(asignatura.name) || editingClase)
                     .map((asignatura) => (
-                      <MenuItem key={asignatura.id} value={asignatura.nombre}>
-                        {asignatura.nombre}
+                      <MenuItem key={asignatura.id} value={asignatura.name}>
+                        {asignatura.name}
                       </MenuItem>
                     ))}
                 </Select>
@@ -659,9 +739,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                   value={nuevaClase.profesor}
                   onChange={(e) => setNuevaClase({ ...nuevaClase, profesor: e.target.value as string })}
                 >
-                  {profesoresPorDefecto.map((profesor) => (
-                    <MenuItem key={profesor.id} value={profesor.nombre}>
-                      {profesor.nombre}
+                  {teachers.map((profesor) => (
+                    <MenuItem key={profesor.id} value={profesor.id}>
+                      {`${profesor.firstname} ${profesor.lastname}`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -674,9 +754,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                   value={nuevaClase.aula}
                   onChange={(e) => setNuevaClase({ ...nuevaClase, aula: e.target.value as string })}
                 >
-                  {aulasPorDefecto.map((aula) => (
-                    <MenuItem key={aula.id} value={aula.nombre}>
-                      {aula.nombre}
+                  {classrooms.map((aula) => (
+                    <MenuItem key={aula.id} value={aula.id}>
+                      {aula.name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -785,6 +865,21 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Aula</InputLabel>
+                    <Select
+                      value={horasExtras?.aula ?? ""}
+                      onChange={(e) => setHorasExtras((prev) => ({ ...prev, aula: e.target.value as string }))}
+                    >
+                      {classrooms.map((aula) => (
+                        <MenuItem key={aula.id} value={aula.id}>
+                          {aula.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={3}>
                   <Button onClick={() => setHorasExtras(null)}>Eliminar Horas Extras</Button>
                 </Grid>
               </Grid>
@@ -832,4 +927,3 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 }
 
 export default GeneradorHorario
-

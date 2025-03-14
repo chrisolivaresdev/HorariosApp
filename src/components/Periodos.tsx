@@ -523,6 +523,7 @@ const Periodos: React.FC = () => {
           >
             {selectedSeccion && (
               <GeneradorHorario
+                periodId={selectedPeriodo.id}
                 seccionId={selectedSeccion.id}
                 selectedSeccion={{
                   nombreSeccion: selectedSeccion.name,
