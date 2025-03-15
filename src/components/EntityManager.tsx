@@ -39,7 +39,11 @@ function EntityManager<T extends Entity>({ entities, setEntities, entityName, fi
     setOpen(true)
   }
 
-  const handleClose = () => {
+  const handleClose = (event, reason) => {
+    if (reason === "backdropClick") {
+      return; 
+    }
+
     setOpen(false)
   }
 

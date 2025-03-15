@@ -25,4 +25,18 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// Interceptor para manejar respuestas
+axiosInstance.interceptors.response.use(
+  (response) => {
+    // Devuelve la respuesta si no hay errores
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Redirige al usuario al login
+      window.location.href = '/login'; // Cambia esta ruta por la del login en tu aplicación
+    }
+    return Promise.reject(error);
+  })
+
 export default axiosInstance;

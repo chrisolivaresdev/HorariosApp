@@ -115,7 +115,11 @@ const Asignaturas: React.FC = () => {
     setOpen(true)
   }
 
-  const handleClose = () => {
+  const handleClose = (event, reason) => {
+    if (reason === "backdropClick") {
+      return; 
+    }
+
     setOpen(false)
     setErrors({})
   }

@@ -220,7 +220,11 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     setOpen(true)
   }
 
-  const handleClose = () => {
+  const handleClose = (event, reason) => {
+    if (reason === "backdropClick") {
+      return; 
+    }
+
     if (editingClase) {
       handleCancel()
     } else {

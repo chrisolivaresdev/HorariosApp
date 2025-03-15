@@ -140,7 +140,10 @@ const Profesores: React.FC = () => {
       })
   }
 
-  const handleClose = () => {
+  const handleClose = (event, reason) => {
+    if (reason === "backdropClick") {
+      return; 
+    }
     setOpen(false)
     setErrors({})
   }
@@ -169,8 +172,22 @@ const Profesores: React.FC = () => {
   }
 
   const handleSave = () => {
+
+    const availabilities = newProfesor.availabilities.map(obj => ({
+      dayOfWeek: obj.dayOfWeek,
+      start_time: obj.start_time,
+      end_time: obj.end_time
+    }));
+
+
     const profesorToAdd = {
-      ...newProfesor,
+      firstname: newProfesor.firstname,
+      lastname: newProfesor.lastname,
+      identification: newProfesor.identification,
+      entry_date: newProfesor.entry_date,
+      subjects: newProfesor.subjects,
+      availabilities: availabilities
+
     }
     if (validateForm()) {
       if (editingProfesor) {
@@ -187,7 +204,7 @@ const Profesores: React.FC = () => {
           .catch((error) => {
             Swal.fire({
               title: "¡Error!",
-              text: "Ha ocurrido un error al actualizar la sección.",
+              text: "Ha ocurrido un error al actualizar el profesor.",
               icon: "error",
             })
             console.error("Error:", error)
@@ -206,7 +223,7 @@ const Profesores: React.FC = () => {
           .catch((error) => {
             Swal.fire({
               title: "¡Error!",
-              text: "Ha ocurrido un error al crear la sección.",
+              text: "Ha ocurrido un error al crear el profesor.",
               icon: "error",
             })
             console.error("Error:", error)
@@ -236,17 +253,9 @@ const Profesores: React.FC = () => {
     setEditingProfesor(profesor)
 
     // Transform the subjects array to match what the Select component expects
-    let subjectIds = []
-
-    if (Array.isArray(profesor.subjects)) {
-      subjectIds = profesor.subjects.map((subject) => {
-        // Handle both object format and direct ID format
-        if (typeof subject === "object") {
-          return subject.id || subject.subjectId
-        }
-        return subject
-      })
-    }
+    const subjectIds = Array.isArray(profesor.subjects)
+      ? profesor.subjects.map((subject) => (typeof subject === "object" && subject.subjectId ? subject.subjectId : subject))
+      : []
 
     setNewProfesor({
       ...profesor,
@@ -272,7 +281,7 @@ const Profesores: React.FC = () => {
           .delete(`teachers/${id}`)
           .then((response) => {
             Swal.fire("¡Eliminada!", "La profesor ha sido eliminada.", "success")
-            // getSecciones()
+            getTeachers()
           })
           .catch((error) => {
             Swal.fire({
@@ -338,6 +347,10 @@ const Profesores: React.FC = () => {
     setErrors((prev) => ({ ...prev, availabilities: "" }))
   }
 
+    console.log(newProfesor.subjects)
+    console.log(newProfesor.subjects)
+
+
   return (
     <>
       <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -369,14 +382,13 @@ const Profesores: React.FC = () => {
                   <Typography variant="body2">ID: {profesor.identification}</Typography>
                   <Typography variant="body2">Ingreso: {profesor.entry_date}</Typography>
                   <Typography variant="body2">
-                    Asignaturas:{" "}
-                    {profesor.subjects
-                      .map((a) => {
-                        const subjectId = typeof a === "object" && a.subjectId ? a.subjectId : a
-                        const subject = subjects.find((s) => s.id === subjectId)
-                        return subject ? subject.name : `Asignatura ${subjectId}`
-                      })
-                      .join(", ")}
+                  Asignaturas:{" "}
+                  {profesor.subjects
+                    .map((a) => {
+                      const subject = subjects.find((s) => s.id === a)
+                      return subject ? subject.name : `Asignatura ${subjectId}`
+                    })
+                    .join(", ")}
                   </Typography>
                 </CardContent>
                 <CardActions>
@@ -538,16 +550,26 @@ const Profesores: React.FC = () => {
                   onChange={handlesubjectIdsChange}
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {(selected as number[]).map((value) => {
-                        const subject = subjects.find((s) => s.id === value)
-                        return <Chip key={value} label={subject ? subject.name : `Asignatura ${value}`} />
-                      })}
+                      {newProfesor.subjects.map((asignatura) => {
+                      // Extract the subject ID correctly whether it's an object or direct ID
+                      const subjectId =
+                        typeof asignatura === "object" && asignatura.subjectId ? asignatura.subjectId : asignatura
+                      // Find the corresponding subject from the subjects array
+                      const subject = subjects.find((s) => s.id === subjectId)
+                      return (
+                        <Chip
+                          key={subjectId}
+                          label={subject ? subject.name : `Asignatura ${subjectId}`}
+                          sx={{ m: 0.5 }}
+                        />
+                      )
+                    })}
                     </Box>
                   )}
                 >
-                  {subjects.map((subject) => (
-                    <MenuItem key={subject.id} value={subject.id}>
-                      {subject.name}
+                  {subjects.map((asignatura) => (
+                    <MenuItem key={asignatura.id} value={asignatura.id}>
+                      {asignatura.name}
                     </MenuItem>
                   ))}
                 </Select>
