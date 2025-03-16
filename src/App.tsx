@@ -101,7 +101,6 @@ function App() {
     [mode],
   )
 
-  console.log(context?.sesion?.access_token)
 
   return (
     <MyProvider>
