@@ -8,6 +8,7 @@ import { AnimatePresence } from "framer-motion"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
 import { MyProvider, MyContext } from './context/Context';
+import './App.css'
 
 export const ColorModeContext = createContext({ toggleColorMode: () => {} })
 
