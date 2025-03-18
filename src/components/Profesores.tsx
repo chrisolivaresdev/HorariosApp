@@ -72,6 +72,23 @@ while (hora < 19 || (hora === 19 && minutos === 0)) {
   }
 }
 
+// Helper function to extract time from ISO string
+const extractTimeFromISO = (isoString) => {
+  if (!isoString) return ""
+  try {
+    // Create a date object from the ISO string
+    const date = new Date(isoString)
+    // Format hours and minutes with leading zeros
+    const hours = date.getUTCHours().toString().padStart(2, "0")
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0")
+    // Return in format "HH:MM"
+    return `${hours}:${minutes}`
+  } catch (e) {
+    console.error("Error parsing ISO date:", e, "for string:", isoString)
+    return ""
+  }
+}
+
 const Profesores: React.FC = () => {
   const [profesores, setProfesores] = useState<Profesor[]>([])
   const [subjects, setsubjectIds] = useState([])
@@ -142,7 +159,7 @@ const Profesores: React.FC = () => {
 
   const handleClose = (event, reason) => {
     if (reason === "backdropClick") {
-      return; 
+      return
     }
     setOpen(false)
     setErrors({})
@@ -171,14 +188,19 @@ const Profesores: React.FC = () => {
     return Object.keys(newErrors).length === 0
   }
 
+  const formatToISO = (timeString: any) => {
+    const currentDate = new Date()
+    const [hours, minutes] = timeString.split(":")
+    currentDate.setUTCHours(hours, minutes, 0, 0)
+    return currentDate.toISOString()
+  }
+
   const handleSave = () => {
-
-    const availabilities = newProfesor.availabilities.map(obj => ({
+    const availabilities = newProfesor.availabilities.map((obj) => ({
       dayOfWeek: obj.dayOfWeek,
-      start_time: obj.start_time,
-      end_time: obj.end_time
-    }));
-
+      start_time: formatToISO(obj.start_time), // Now this will be the exact time string like "07:00"
+      end_time: formatToISO(obj.end_time), // Now this will be the exact time string like "08:30"
+    }))
 
     const profesorToAdd = {
       firstname: newProfesor.firstname,
@@ -186,8 +208,7 @@ const Profesores: React.FC = () => {
       identification: newProfesor.identification,
       entry_date: newProfesor.entry_date,
       subjects: newProfesor.subjects,
-      availabilities: availabilities
-
+      availabilities: availabilities,
     }
     if (validateForm()) {
       if (editingProfesor) {
@@ -251,16 +272,34 @@ const Profesores: React.FC = () => {
 
   const handleEdit = (profesor: Profesor) => {
     setEditingProfesor(profesor)
+    console.log("Profesor a editar:", profesor)
 
     // Transform the subjects array to match what the Select component expects
     const subjectIds = Array.isArray(profesor.subjects)
-      ? profesor.subjects.map((subject) => (typeof subject === "object" && subject.subjectId ? subject.subjectId : subject))
+      ? profesor.subjects.map((subject) =>
+          typeof subject === "object" && subject.subjectId ? subject.subjectId : subject,
+        )
       : []
+
+    // Transform availabilities to extract just the time part from ISO strings
+    const transformedAvailabilities = profesor.availabilities.map((avail) => {
+      const startTime = extractTimeFromISO(avail.start_time)
+      const endTime = extractTimeFromISO(avail.end_time)
+      console.log(`Día: ${avail.dayOfWeek}, Original start_time: ${avail.start_time}, Extraído: ${startTime}`)
+      console.log(`Día: ${avail.dayOfWeek}, Original end_time: ${avail.end_time}, Extraído: ${endTime}`)
+
+      return {
+        dayOfWeek: avail.dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
+      }
+    })
 
     setNewProfesor({
       ...profesor,
       entry_date: new Date(profesor.entry_date).toISOString().split("T")[0],
       subjects: subjectIds,
+      availabilities: transformedAvailabilities,
     })
     setOpen(true)
   }
@@ -300,15 +339,11 @@ const Profesores: React.FC = () => {
       ...prev,
       availabilities: prev.availabilities.map((d) => {
         if (d.dayOfWeek === dayOfWeek) {
-          const [hours, minutes] = valor.split(":").map(Number)
-          const date = new Date()
-          date.setHours(hours, minutes, 0, 0)
-          const isoString = date.toISOString()
-
+          // Just use the time string directly without creating a Date object
           if (tipo === "start_time") {
-            return { ...d, [tipo]: isoString, end_time: "" }
+            return { ...d, [tipo]: valor, end_time: "" }
           } else {
-            return { ...d, [tipo]: isoString }
+            return { ...d, [tipo]: valor }
           }
         }
         return d
@@ -347,10 +382,6 @@ const Profesores: React.FC = () => {
     setErrors((prev) => ({ ...prev, availabilities: "" }))
   }
 
-    console.log(newProfesor.subjects)
-    console.log(newProfesor.subjects)
-
-
   return (
     <>
       <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -382,13 +413,14 @@ const Profesores: React.FC = () => {
                   <Typography variant="body2">ID: {profesor.identification}</Typography>
                   <Typography variant="body2">Ingreso: {profesor.entry_date}</Typography>
                   <Typography variant="body2">
-                  Asignaturas:{" "}
-                  {profesor.subjects
-                    .map((a) => {
-                      const subject = subjects.find((s) => s.id === a)
-                      return subject ? subject.name : `Asignatura ${subjectId}`
-                    })
-                    .join(", ")}
+                    Asignaturas:{" "}
+                    {profesor.subjects
+                      .map((a) => {
+                        const subjectId = typeof a === "object" && a !== null && "subjectId" in a ? a.subjectId : a
+                        const subject = subjects.find((s) => s.id === subjectId)
+                        return subject ? subject.name : `Asignatura ${subjectId}`
+                      })
+                      .join(", ")}
                   </Typography>
                 </CardContent>
                 <CardActions>
@@ -551,19 +583,19 @@ const Profesores: React.FC = () => {
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       {newProfesor.subjects.map((asignatura) => {
-                      // Extract the subject ID correctly whether it's an object or direct ID
-                      const subjectId =
-                        typeof asignatura === "object" && asignatura.subjectId ? asignatura.subjectId : asignatura
-                      // Find the corresponding subject from the subjects array
-                      const subject = subjects.find((s) => s.id === subjectId)
-                      return (
-                        <Chip
-                          key={subjectId}
-                          label={subject ? subject.name : `Asignatura ${subjectId}`}
-                          sx={{ m: 0.5 }}
-                        />
-                      )
-                    })}
+                        // Extract the subject ID correctly whether it's an object or direct ID
+                        const subjectId =
+                          typeof asignatura === "object" && asignatura.subjectId ? asignatura.subjectId : asignatura
+                        // Find the corresponding subject from the subjects array
+                        const subject = subjects.find((s) => s.id === subjectId)
+                        return (
+                          <Chip
+                            key={subjectId}
+                            label={subject ? subject.name : `Asignatura ${subjectId}`}
+                            sx={{ m: 0.5 }}
+                          />
+                        )
+                      })}
                     </Box>
                   )}
                 >
@@ -599,13 +631,7 @@ const Profesores: React.FC = () => {
                       <FormControl fullWidth error={!!errors[`availability_${dayOfWeek}`]}>
                         <InputLabel>Hora de inicio</InputLabel>
                         <Select
-                          value={
-                            newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time
-                              ? new Date(
-                                  newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)!.start_time,
-                                ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
-                              : ""
-                          }
+                          value={newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time || ""}
                           onChange={(e) => handleHoraChange(dayOfWeek, "start_time", e.target.value as string)}
                         >
                           {horas.map((hora) => (
@@ -618,13 +644,7 @@ const Profesores: React.FC = () => {
                       <FormControl fullWidth error={!!errors[`availability_${dayOfWeek}`]}>
                         <InputLabel>Hora de fin</InputLabel>
                         <Select
-                          value={
-                            newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.end_time
-                              ? new Date(
-                                  newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)!.end_time,
-                                ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
-                              : ""
-                          }
+                          value={newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.end_time || ""}
                           onChange={(e) => handleHoraChange(dayOfWeek, "end_time", e.target.value as string)}
                         >
                           {horas
@@ -632,14 +652,7 @@ const Profesores: React.FC = () => {
                               const startTime = newProfesor.availabilities.find(
                                 (d) => d.dayOfWeek === dayOfWeek,
                               )?.start_time
-                              return startTime
-                                ? hora >
-                                    new Date(startTime).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                    })
-                                : true
+                              return startTime ? hora > startTime : true
                             })
                             .map((hora) => (
                               <MenuItem key={hora} value={hora}>

@@ -27,6 +27,7 @@ import {
   TableRow,
   IconButton,
   Tooltip,
+  Chip, // Añadido para mostrar las horas disponibles
 } from "@mui/material"
 import {
   Add as AddIcon,
@@ -35,6 +36,7 @@ import {
   Warning as WarningIcon,
   Download as DownloadIcon,
   Save as SaveIcon,
+  CalendarMonth as CalendarIcon, // Icono para mostrar disponibilidad
 } from "@mui/icons-material"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
@@ -84,6 +86,82 @@ interface HorasExtras {
   classroomId?: string
 }
 
+// Datos de ejemplo para la disponibilidad de profesores
+// Esto debería venir de tu API en una implementación real
+interface TeacherAvailability {
+  [key: string]: {
+    // teacherId
+    [key: string]: string[] // día: franjas horarias
+  }
+}
+
+// Add a new interface for classroom availability
+interface ClassroomAvailability {
+  [key: string]: {
+    // classroomId
+    [key: string]: string[] // día: franjas horarias
+  }
+}
+
+// Add a mapping between subjects and professors who can teach them
+interface SubjectTeacherMapping {
+  [key: string]: string[] // subjectId: array of teacherIds
+}
+
+const teacherAvailability: TeacherAvailability = {
+  // Datos de ejemplo - reemplazar con datos reales de tu API
+  "1": {
+    Lunes: ["07:00-11:00", "14:00-16:00"],
+    Martes: ["10:00-12:00"],
+    Miércoles: ["09:00-11:00", "15:00-17:00"],
+    Jueves: [],
+    Viernes: ["13:00-15:00", "16:00-18:00"],
+  },
+  "2": {
+    Lunes: ["11:00-13:00"],
+    Martes: ["09:00-12:00", "14:00-16:00"],
+    Miércoles: [],
+    Jueves: ["10:00-12:00", "15:00-17:00"],
+    Viernes: ["09:00-11:00"],
+  },
+}
+
+// Add mock data for classroom availability
+const classroomAvailability: ClassroomAvailability = {
+  // Datos de ejemplo - reemplazar con datos reales de tu API
+  "1": {
+    Lunes: ["07:00-10:30", "14:00-16:00"],
+    Martes: ["07:00-12:00"],
+    Miércoles: ["09:00-11:00", "15:00-17:00"],
+    Jueves: ["07:00-10:30", "14:00-18:00"],
+    Viernes: ["13:00-15:00", "16:00-18:00"],
+  },
+  "2": {
+    Lunes: ["11:00-13:00", "16:00-18:00"],
+    Martes: ["09:00-12:00", "14:00-16:00"],
+    Miércoles: ["07:00-10:30", "14:00-16:00"],
+    Jueves: ["10:00-12:00", "15:00-17:00"],
+    Viernes: ["09:00-11:00", "14:00-18:00"],
+  },
+  "3": {
+    Lunes: ["07:00-09:00", "14:00-18:00"],
+    Martes: ["07:00-10:30", "14:00-16:00"],
+    Miércoles: ["10:00-12:00", "15:00-17:00"],
+    Jueves: ["07:00-09:00", "14:00-16:00"],
+    Viernes: ["07:00-10:30", "14:00-18:00"],
+  },
+}
+
+// Add mock data for subject teacher mapping
+const subjectTeacherMapping: SubjectTeacherMapping = {
+  // Datos de ejemplo - reemplazar con datos reales de tu API
+  "1": ["1", "3"],
+  "2": ["2", "4"],
+  "3": ["1", "2"],
+  "4": ["3", "4"],
+  "5": ["1", "4"],
+}
+
 const aulasPorDefecto: classroomId[] = [
   { id: 1, name: "classroomId 101", max_capacity: 30 },
   { id: 2, name: "classroomId 102", max_capacity: 25 },
@@ -102,7 +180,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     teacherId: "",
     subjectId: "",
     classroomId: "",
-    day_of_week:"Lunes",
+    day_of_week: "Lunes",
     start_time: "",
     end_time: "",
     horasAsignadas: 0,
@@ -115,6 +193,14 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   const [teachers, setteachers] = useState([])
   const [subjects, setsubjects] = useState([])
   const [classrooms, setclassrooms] = useState([])
+
+  // Nuevos estados para el diálogo de disponibilidad
+  const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false)
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("")
+
+  // Add new state for classroom availability dialog
+  const [classroomAvailabilityDialogOpen, setClassroomAvailabilityDialogOpen] = useState(false)
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>("")
 
   const horarioRef = useRef<HTMLDivElement>(null)
 
@@ -180,10 +266,10 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
         }))
         console.log(selectedSeccion, subjects)
 
-        const filteredSubjects = subjects.filter((subject) =>
-          subject.journey === selectedSeccion.trayecto &&
-          subject.quarters.includes(selectedSeccion.trimestre)
-        );
+        const filteredSubjects = subjects.filter(
+          (subject) =>
+            subject.journey === selectedSeccion.trayecto && subject.quarters.includes(selectedSeccion.trimestre),
+        )
 
         setsubjects(filteredSubjects)
       })
@@ -229,7 +315,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
   const handleClose = (event, reason) => {
     if (reason === "backdropClick") {
-      return; 
+      return
     }
 
     if (editingClase) {
@@ -321,6 +407,13 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   }
 
   const verificarSolapamiento = (nuevaClase: Omit<Clase, "id">, claseId?: string): boolean => {
+    console.log("Verificando solapamiento con clases:", clases)
+    // Verificar si clases es undefined o null
+    if (!clases || !Array.isArray(clases)) {
+      console.warn("El array de clases es undefined o no es un array")
+      return false
+    }
+
     return clases.some((clase) => {
       if (claseId && clase.id === claseId) return false
       return checkOverlap(
@@ -335,6 +428,21 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   }
 
   const handleSave = () => {
+    // Validaciones iniciales (sin cambios)
+    if (
+      !nuevaClase.subjectId ||
+      !nuevaClase.teacherId ||
+      !nuevaClase.classroomId ||
+      !nuevaClase.day_of_week ||
+      !nuevaClase.start_time ||
+      !nuevaClase.end_time
+    ) {
+      setWarningMessage("Por favor, complete todos los campos del formulario.")
+      setOpenWarning(true)
+      return
+    }
+
+    // Resto de validaciones (sin cambios)
     if (nuevaClase.end_time <= nuevaClase.start_time) {
       setWarningMessage("La hora de finalización debe ser posterior a la hora de inicio.")
       setOpenWarning(true)
@@ -353,6 +461,17 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     if (horasExtras) {
       if (!horasExtras.classroomId) {
         setWarningMessage("Debe seleccionar un classroomId para las horas extras.")
+        setOpenWarning(true)
+        return
+      }
+      if (horasExtras.end_time <= horasExtras.start_time) {
+        setWarningMessage("La hora de finalización debe ser posterior a la hora de inicio.")
+        setOpenWarning(true)
+        return
+      }
+
+      if (!horasExtras.day_of_week) {
+        setWarningMessage("Por favor, complete todos los campos del formulario.")
         setOpenWarning(true)
         return
       }
@@ -394,33 +513,28 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
     if (totalHorasAsignadas < horasDisponibles) {
       setWarningMessage(
-        `Faltan ${horasDisponibles - totalHorasAsignadas} horas por asignar para ${subjects.find( subject => subject.id === nuevaClase.subjectId).name}.`,
+        `Faltan ${horasDisponibles - totalHorasAsignadas} horas por asignar para ${subjects.find((subject) => subject.id === nuevaClase.subjectId).name}.`,
       )
       setOpenWarning(true)
       return
     } else if (totalHorasAsignadas > horasDisponibles) {
       setWarningMessage(
-        `Se han asignado ${totalHorasAsignadas - horasDisponibles} horas de más para ${subjects.find( subject => subject.id === nuevaClase.subjectId).name}.`,
+        `Se han asignado ${totalHorasAsignadas - horasDisponibles} horas de más para ${subjects.find((subject) => subject.id === nuevaClase.subjectId).name}.`,
       )
       setOpenWarning(true)
       return
     }
-    console.log(nuevaClase)
-    console.log({
-      ...nuevaClase,
-      horasAsignadas: horasAsignadas,
-    })
 
-    let schedules= [
+    const schedules = [
       {
-        "start_time": nuevaClase.start_time,
-        "end_time": nuevaClase.end_time,
-        "day_of_week": nuevaClase.day_of_week,
-        "subjectId": nuevaClase.subjectId,
-        "teacherId": nuevaClase.teacherId,
-        "classroomId": nuevaClase.classroomId,
-        "periodId": periodId
-      }
+        start_time: nuevaClase.start_time,
+        end_time: nuevaClase.end_time,
+        day_of_week: nuevaClase.day_of_week,
+        subjectId: nuevaClase.subjectId,
+        teacherId: nuevaClase.teacherId,
+        classroomId: nuevaClase.classroomId,
+        periodId: periodId,
+      },
     ]
 
     const nuevaClaseConHoras = {
@@ -430,120 +544,114 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
       color: editingClase ? editingClase.color : generarColorAleatorio(nuevaClase.subjectId),
     }
 
-    setClases((prevClases) => {
-      // Remove all existing classes for this subject
-      const updatedClases = prevClases.filter((c) => c.subjectId !== nuevaClase.subjectId)
+    // Preparar los datos para la validación
+    const validate = {
+      sectionId: seccionId,
+      schedules: schedules,
+    }
 
-      // Add the new or updated class
-      updatedClases.push(nuevaClaseConHoras)
+    // Añadir horas extras si existen
+    if (horasExtras) {
+      const extraHoursClass = {
+        ...horasExtras,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        teacherId: nuevaClase.teacherId,
+        subjectId: nuevaClase.subjectId,
+        classroomId: horasExtras.classroomId || nuevaClase.classroomId,
+        color: nuevaClaseConHoras.color,
+        horasAsignadas: calcularHorasAsignadas(horasExtras.start_time, horasExtras.end_time),
+      }
+      validate.schedules.push({
+        start_time: horasExtras.start_time,
+        end_time: horasExtras.end_time,
+        day_of_week: horasExtras.day_of_week,
+        subjectId: nuevaClase.subjectId,
+        teacherId: nuevaClase.teacherId,
+        classroomId: horasExtras?.classroomId,
+        periodId: periodId,
+      })
+    }
 
-      let validate = {
-        "sectionId": seccionId,
-        "schedules": schedules
+    // Formatear las horas para la API
+    validate.schedules = validate.schedules.map((schedule) => {
+      const formatToISO = (timeString: any) => {
+        const currentDate = new Date()
+        const [hours, minutes] = timeString.split(":")
+        currentDate.setUTCHours(hours, minutes, 0, 0)
+        return currentDate.toISOString()
       }
 
-      // Add extra hours if they exist
-      if (horasExtras) {
-        const extraHoursClass = {
-          ...horasExtras,
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          teacherId: nuevaClase.teacherId,
-          subjectId: nuevaClase.subjectId,
-          classroomId: horasExtras.classroomId || nuevaClase.classroomId, // Usar el classroomId específica de las horas extras
-          color: nuevaClaseConHoras.color,
-          horasAsignadas: calcularHorasAsignadas(horasExtras.start_time, horasExtras.end_time),
-        }
-        validate.schedules.push(
-          {
-          "start_time": horasExtras.start_time,
-          "end_time": horasExtras.end_time,
-          "day_of_week": horasExtras.day_of_week,
-          "subjectId": nuevaClase.subjectId,
-          "teacherId": nuevaClase.teacherId,
-          "classroomId": horasExtras?.classroomId,
-          "periodId": periodId
+      return {
+        ...schedule,
+        start_time: formatToISO(schedule.start_time),
+        end_time: formatToISO(schedule.end_time),
+      }
+    })
+
+    // Primero validar con la API
+    axiosInstance
+      .post("schedules/validate", validate)
+      .then((response) => {
+        Swal.fire({
+          title: "Bien!",
+          text: "Datos disponibles",
+          icon: "success",
         })
 
-        updatedClases.push(extraHoursClass)
+        // Ahora actualizar el estado después de la validación exitosa
+        setClases((prevClases) => {
+          // Asegurarse de que prevClases sea un array
+          const currentClases = Array.isArray(prevClases) ? prevClases : []
 
-      }
-      
-  
-      validate.schedules = validate.schedules.map(schedule => {
-        const formatToISO = (timeString: any) => {
-          const currentDate = new Date();
-          const [hours, minutes] = timeString.split(":");
-          currentDate.setUTCHours(hours, minutes, 0, 0);
-          return currentDate.toISOString();
-        };
-      
-        return {
-          ...schedule,
-          start_time: formatToISO(schedule.start_time),
-          end_time: formatToISO(schedule.end_time),
-        };
-      });
-  
+          // Eliminar todas las clases existentes para esta asignatura
+          const updatedClases = currentClases.filter((c) => c.subjectId !== nuevaClase.subjectId)
 
-    //   axiosInstance
-    //   .post("schedules/validate", validate)
-    //   .then((response) => {
-    //     Swal.fire({
-    //       title: "Bien!",
-    //       text: "Datos disponibles",
-    //       icon: "success",
-    //     })
-         
-    //   setHorasRestantes((prev) => {
-    //     const horasOriginales = prev[nuevaClaseConHoras.subjectId]
-    //     return {
-    //       ...prev,
-    //       [nuevaClaseConHoras.subjectId]: horasOriginales - totalHorasAsignadas,
-    //     }
-    //   })
+          // Añadir la nueva clase o la clase actualizada
+          updatedClases.push(nuevaClaseConHoras)
 
-    //   console.log("Clase guardada:", nuevaClaseConHoras)
+          // Añadir horas extras si existen
+          if (horasExtras) {
+            const extraHoursClass = {
+              ...horasExtras,
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              teacherId: nuevaClase.teacherId,
+              subjectId: nuevaClase.subjectId,
+              classroomId: horasExtras.classroomId || nuevaClase.classroomId,
+              color: nuevaClaseConHoras.color,
+              horasAsignadas: calcularHorasAsignadas(horasExtras.start_time, horasExtras.end_time),
+            }
+            updatedClases.push(extraHoursClass)
+          }
 
-    //   if (!editingClase) {
-    //     setCreatedSubjects((prev) => [...prev, nuevaClase.subjectId])
-    //   }
+          console.log("Clases actualizadas:", updatedClases)
+          return updatedClases
+        })
 
-    //   handleClose()
-
-    //   return updatedClases
-       
-    //   })
-    //   .catch((error) => {
-    //     Swal.fire({
-    //       title: "¡Error!",
-    //       text: error.response.data.message,
-    //       icon: "error",
-    //     })
-    //     console.error("Error:", error)
-    //   })
-    //   return prevClases.filter((c) => c.subjectId !== nuevaClase.subjectId)
-    // })
-
-    setHorasRestantes((prev) => {
+        // Actualizar las horas restantes
+        setHorasRestantes((prev) => {
           const horasOriginales = prev[nuevaClaseConHoras.subjectId]
           return {
             ...prev,
             [nuevaClaseConHoras.subjectId]: horasOriginales - totalHorasAsignadas,
           }
         })
-  
-        console.log("Clase guardada:", nuevaClaseConHoras)
-  
+
+        // Si no estamos editando, añadir la asignatura a las creadas
         if (!editingClase) {
           setCreatedSubjects((prev) => [...prev, nuevaClase.subjectId])
         }
-  
-        handleClose()
-  
-        return updatedClases
 
-  })
-
+        // Cerrar el diálogo
+        setOpen(false)
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: error.response?.data?.message || "Ha ocurrido un error al validar el horario",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
   }
 
   const calcularHorasAsignadas = (start_time: string, end_time: string) => {
@@ -573,7 +681,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   }
 
   const encontrarClase = (hora: string, day_of_week: string) => {
-    return clases.find((clase) => clase.day_of_week === day_of_week && clase.start_time <= hora && clase.end_time > hora)
+    return clases?.find(
+      (clase) => clase.day_of_week === day_of_week && clase.start_time <= hora && clase.end_time > hora,
+    )
   }
 
   const renderAccionesClase = (clase: Clase) => (
@@ -656,6 +766,43 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     setOpen(false)
   }
 
+  // Nueva función para manejar la apertura del diálogo de disponibilidad
+  const handleShowAvailability = (teacherId: string) => {
+    setSelectedTeacherId(teacherId)
+    setAvailabilityDialogOpen(true)
+  }
+
+  // Función para cerrar el diálogo de disponibilidad
+  const handleCloseAvailability = () => {
+    setAvailabilityDialogOpen(false)
+  }
+
+  // Función para obtener el nombre del profesor por ID
+  const getTeacherName = (teacherId: string) => {
+    const teacher = teachers.find((t) => t.id == teacherId)
+    return teacher ? `${teacher.firstname} ${teacher.lastname}` : "Profesor"
+  }
+
+  // Add function to handle opening classroom availability dialog
+  const handleShowClassroomAvailability = (classroomId: string) => {
+    setSelectedClassroomId(classroomId)
+    setClassroomAvailabilityDialogOpen(true)
+  }
+
+  // Add function to close classroom availability dialog
+  const handleCloseClassroomAvailability = () => {
+    setClassroomAvailabilityDialogOpen(false)
+  }
+
+  // Add function to get classroom name by ID
+  const getClassroomName = (classroomId: string) => {
+    const classroom = classrooms.find((c) => c.id == classroomId)
+    return classroom ? classroom.name : "Aula"
+  }
+
+  useEffect(() => {
+    console.log("Estado de clases actualizado:", clases)
+  }, [clases])
 
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
@@ -721,10 +868,13 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                               {clase.start_time} - {clase.end_time}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
-                              {subjects.find( subject => subject.id === clase.subjectId).name}
+                              {subjects.find((subject) => subject.id === clase.subjectId).name}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
-                              Prof: {teachers.find( teacher => teacher.id == clase.teacherId).firstname + " " + teachers.find( teacher => teacher.id == clase.teacherId).lastname}
+                              Prof:{" "}
+                              {teachers.find((teacher) => teacher.id == clase.teacherId).firstname +
+                                " " +
+                                teachers.find((teacher) => teacher.id == clase.teacherId).lastname}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: "0.7rem" }}>
                               {clase.classroomId}
@@ -785,18 +935,21 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                             <Box className="clase-content" sx={{ padding: "2px" }}>
                               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                                 <Typography variant="subtitle1" sx={{ fontSize: "0.8rem", fontWeight: "bold" }}>
-                                {subjects.find( subject => subject.id === clase.subjectId).name}
+                                  {subjects.find((subject) => subject.id === clase.subjectId).name}
                                 </Typography>
                                 {!isPrinting && renderAccionesClase(clase)}
                               </Box>
                               <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                              Prof: {teachers.find( teacher => teacher.id == clase.teacherId).firstname + " " + teachers.find( teacher => teacher.id == clase.teacherId).lastname}
+                                Prof:{" "}
+                                {teachers.find((teacher) => teacher.id == clase.teacherId).firstname +
+                                  " " +
+                                  teachers.find((teacher) => teacher.id == clase.teacherId).lastname}
                               </Typography>
                               <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                               {classrooms.find(classroom => classroom.id == clase.classroomId).name}
+                                {classrooms.find((classroom) => classroom.id == clase.classroomId).name}
                               </Typography>
                               <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                              {classrooms.find(classroom => classroom.id == clase.classroomId).type}
+                                {classrooms.find((classroom) => classroom.id == clase.classroomId).type}
                               </Typography>
                             </Box>
                           )}
@@ -820,10 +973,44 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                 <InputLabel>Asignaturas</InputLabel>
                 <Select
                   value={nuevaClase.subjectId}
-                  onChange={(e) => setNuevaClase({ ...nuevaClase, subjectId: e.target.value as string })}
+                  // onChange={(e) => setNuevaClase({ ...nuevaClase, subjectId: e.target.value as string, teacherId : undefined})}
+                  onChange={(e) => {
+                    const selectedSubjectId = e.target.value as string
+
+                    // Filter teachers for this subject
+                    const availableTeachers = teachers.filter(
+                      (teacher) =>
+                        teacher.subjects && teacher.subjects.some((sub) => sub.subjectId == selectedSubjectId),
+                    )
+
+                    // Check if there are no teachers available for this subject
+                    if (availableTeachers.length === 0 && selectedSubjectId) {
+                      Swal.fire({
+                        title: "¡Advertencia!",
+                        text: "No hay profesor disponible para dar esa materia.",
+                        icon: "warning",
+                      })
+                    }
+
+                    // Reset teacherId when subject changes
+                    setNuevaClase({
+                      ...nuevaClase,
+                      subjectId: selectedSubjectId,
+                      teacherId: undefined, // Clear the professor selection
+                    })
+                  }}
                 >
                   {subjects
-                    .filter((asignatura) => !createdSubjects.includes(asignatura.name) || editingClase)
+                    .filter((asignatura) => {
+                      // Si estamos editando, mostrar la asignatura actual y las que no están en uso
+                      if (editingClase && asignatura.id.toString() === nuevaClase.subjectId) {
+                        return true
+                      }
+                     
+
+                      // Si no estamos editando, mostrar solo las asignaturas que no están en uso
+                      return !createdSubjects.includes(asignatura.id)
+                    })
                     .map((asignatura) => (
                       <MenuItem key={asignatura.id} value={asignatura.id}>
                         {asignatura.name}
@@ -832,35 +1019,82 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                 </Select>
               </FormControl>
             </Grid>
+            {/* Replace the professor select in the dialog with this updated version */}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Profesor</InputLabel>
-                <Select
-                  value={nuevaClase.teacherId}
-                  onChange={(e) => setNuevaClase({ ...nuevaClase, teacherId: e.target.value as string })}
+              <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+                <FormControl
+                  fullWidth
+                  disabled={
+                    !nuevaClase.subjectId ||
+                    !teachers.filter(
+                      (teacher) =>
+                        !nuevaClase.subjectId || teacher.subjects.some((sub) => sub.subjectId == nuevaClase.subjectId),
+                    ).length >= 1
+                  }
                 >
-                  {teachers.map((teacherId) => (
-                    <MenuItem key={teacherId.id} value={teacherId.id}>
-                      {`${teacherId.firstname} ${teacherId.lastname}`}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  <InputLabel>Profesor</InputLabel>
+                  <Select
+                    value={nuevaClase.teacherId}
+                    onChange={(e) => {
+                      setNuevaClase({ ...nuevaClase, teacherId: e.target.value as string })
+                      setSelectedTeacherId(e.target.value as string)
+                    }}
+                  >
+                    {teachers
+                      .filter(
+                        (teacher) =>
+                          !nuevaClase.subjectId ||
+                          teacher.subjects.some((sub) => sub.subjectId == nuevaClase.subjectId),
+                      )
+                      .map((teacherId) => (
+                        <MenuItem key={teacherId.id} value={teacherId.id}>
+                          {`${teacherId.firstname} ${teacherId.lastname}`}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+                {nuevaClase.teacherId && (
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleShowAvailability(nuevaClase.teacherId)}
+                    sx={{ ml: 1 }}
+                    title="Ver disponibilidad del profesor"
+                  >
+                    <CalendarIcon />
+                  </IconButton>
+                )}
+              </Box>
             </Grid>
+            {/* Replace the classroom select in the dialog with this updated version */}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Aula</InputLabel>
-                <Select
-                  value={nuevaClase.classroomId}
-                  onChange={(e) => setNuevaClase({ ...nuevaClase, classroomId: e.target.value as string })}
-                >
-                  {classrooms.map((classroomId) => (
-                    <MenuItem key={classroomId.id} value={classroomId.id}>
-                      {`${classroomId.name} - Capacidad ${classroomId.max_capacity}`}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+                <FormControl fullWidth>
+                  <InputLabel>Aula</InputLabel>
+                  <Select
+                    value={nuevaClase.classroomId}
+                    onChange={(e) => {
+                      setNuevaClase({ ...nuevaClase, classroomId: e.target.value as string })
+                      setSelectedClassroomId(e.target.value as string)
+                    }}
+                  >
+                    {classrooms.map((classroomId) => (
+                      <MenuItem key={classroomId.id} value={classroomId.id}>
+                        {`${classroomId.name} - Capacidad ${classroomId.max_capacity}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {nuevaClase.classroomId && (
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleShowClassroomAvailability(nuevaClase.classroomId)}
+                    sx={{ ml: 1 }}
+                    title="Ver disponibilidad del aula"
+                  >
+                    <CalendarIcon />
+                  </IconButton>
+                )}
+              </Box>
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
@@ -973,8 +1207,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                     >
                       {classrooms.map((classroomId) => (
                         <MenuItem key={classroomId.id} value={classroomId.id}>
-                            {`${classroomId.name} - Capacidad - ${classroomId.max_capacity}`}
-                        </MenuItem> 
+                          {`${classroomId.name} - Capacidad - ${classroomId.max_capacity}`}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -1022,8 +1256,105 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Diálogo de disponibilidad del profesor */}
+      <Dialog open={availabilityDialogOpen} onClose={handleCloseAvailability} maxWidth="sm" fullWidth>
+        <DialogTitle>Disponibilidad de {getTeacherName(selectedTeacherId)}</DialogTitle>
+        <DialogContent>
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Día</TableCell>
+                  <TableCell>Horas Disponibles</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {dias.map((day) => (
+                  <TableRow key={day}>
+                    <TableCell>{day}</TableCell>
+                    <TableCell>
+                      {teacherAvailability[selectedTeacherId]?.[day]?.length > 0 ? (
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                          {teacherAvailability[selectedTeacherId]?.[day]?.map((timeSlot, index) => (
+                            <Chip
+                              key={index}
+                              label={timeSlot}
+                              size="small"
+                              sx={{ bgcolor: "primary.light", color: "primary.contrastText" }}
+                            />
+                          )) || "No disponible"}
+                        </Box>
+                      ) : (
+                        "No disponible"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Typography variant="caption" sx={{ display: "block", mt: 2, color: "text.secondary" }}>
+            Nota: Esta información es provisional. Consulte con el profesor para confirmar su disponibilidad.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAvailability} color="primary">
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de disponibilidad del aula */}
+      <Dialog open={classroomAvailabilityDialogOpen} onClose={handleCloseClassroomAvailability} maxWidth="sm" fullWidth>
+        <DialogTitle>Disponibilidad de {getClassroomName(selectedClassroomId)}</DialogTitle>
+        <DialogContent>
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Día</TableCell>
+                  <TableCell>Horas Disponibles</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {dias.slice(0, 5).map((day) => (
+                  <TableRow key={day}>
+                    <TableCell>{day}</TableCell>
+                    <TableCell>
+                      {classroomAvailability[selectedClassroomId]?.[day]?.length > 0 ? (
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                          {classroomAvailability[selectedClassroomId]?.[day]?.map((timeSlot, index) => (
+                            <Chip
+                              key={index}
+                              label={timeSlot}
+                              size="small"
+                              sx={{ bgcolor: "success.light", color: "success.contrastText" }}
+                            />
+                          )) || "No disponible"}
+                        </Box>
+                      ) : (
+                        "No disponible"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Typography variant="caption" sx={{ display: "block", mt: 2, color: "text.secondary" }}>
+            Nota: Esta información es provisional. Verifique la disponibilidad actual del aula.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseClassroomAvailability} color="primary">
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
 
 export default GeneradorHorario
+
