@@ -334,6 +334,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   const handleEdit = (clase: Clase) => {
     setClaseOriginal(clase)
     setEditingClase(clase)
+    console.log(clase)
     setNuevaClase({
       teacherId: clase.teacherId,
       subjectId: clase.subjectId,
@@ -638,7 +639,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
         // Si no estamos editando, añadir la asignatura a las creadas
         if (!editingClase) {
-          setCreatedSubjects((prev) => [...prev, nuevaClase.subjectId])
+          setCreatedSubjects((prev) => [...prev, nuevaClase.subjectId.toString()])
         }
 
         // Cerrar el diálogo
@@ -755,11 +756,19 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
   const handleCancel = () => {
     if (claseOriginal) {
-      setClases((prevClases) => {
-        const clasesOriginales = prevClases.filter((c) => c.subjectId === claseOriginal.subjectId)
-        return [...prevClases, ...clasesOriginales]
-      })
+      // Get all classes with the same subject ID that were removed
+      const clasesOriginales = clases.filter((c) => c.subjectId === claseOriginal.subjectId)
+
+      // If no classes with this subject ID exist in the current state, restore the original ones
+      if (clasesOriginales.length === 0) {
+        // Find all classes that were removed when editing started
+        const toRestore = clases.filter((c) => c.id !== claseOriginal.id && c.subjectId === claseOriginal.subjectId)
+
+        // Add back the original class and any associated classes
+        setClases((prevClases) => [...prevClases, claseOriginal, ...toRestore])
+      }
     }
+
     setClaseOriginal(null)
     setEditingClase(null)
     setHorasExtras(null)
@@ -1002,14 +1011,13 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                 >
                   {subjects
                     .filter((asignatura) => {
-                      // Si estamos editando, mostrar la asignatura actual y las que no están en uso
-                      if (editingClase && asignatura.id.toString() === nuevaClase.subjectId) {
+                      // Si estamos editando, mostrar la asignatura actual
+                      if (editingClase && asignatura.id === nuevaClase.subjectId) {
                         return true
                       }
-                     
 
-                      // Si no estamos editando, mostrar solo las asignaturas que no están en uso
-                      return !createdSubjects.includes(asignatura.id)
+                      // Si no estamos editando, solo mostrar asignaturas que no están en uso
+                      return !createdSubjects.includes(asignatura.id.toString())
                     })
                     .map((asignatura) => (
                       <MenuItem key={asignatura.id} value={asignatura.id}>
