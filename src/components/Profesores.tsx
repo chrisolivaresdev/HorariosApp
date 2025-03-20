@@ -319,7 +319,7 @@ const Profesores: React.FC = () => {
         axiosInstance
           .delete(`teachers/${id}`)
           .then((response) => {
-            Swal.fire("¡Eliminada!", "La profesor ha sido eliminada.", "success")
+            Swal.fire("¡Eliminada!", "El profesor ha sido eliminad.", "success")
             getTeachers()
           })
           .catch((error) => {
