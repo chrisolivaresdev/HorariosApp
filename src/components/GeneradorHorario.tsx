@@ -152,22 +152,6 @@ const classroomAvailability: ClassroomAvailability = {
   },
 }
 
-// Add mock data for subject teacher mapping
-const subjectTeacherMapping: SubjectTeacherMapping = {
-  // Datos de ejemplo - reemplazar con datos reales de tu API
-  "1": ["1", "3"],
-  "2": ["2", "4"],
-  "3": ["1", "2"],
-  "4": ["3", "4"],
-  "5": ["1", "4"],
-}
-
-const aulasPorDefecto: classroomId[] = [
-  { id: 1, name: "classroomId 101", max_capacity: 30 },
-  { id: 2, name: "classroomId 102", max_capacity: 25 },
-  { id: 3, name: "Laboratorio", max_capacity: 20 },
-]
-
 const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selectedSeccion, periodId }) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("md"))
@@ -193,6 +177,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   const [teachers, setteachers] = useState([])
   const [subjects, setsubjects] = useState([])
   const [classrooms, setclassrooms] = useState([])
+  const [editHorario, seteditHorario] = useState<boolean>(false)
+  
 
   // Nuevos estados para el diálogo de disponibilidad
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false)
@@ -223,6 +209,10 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   useEffect(() => {
     getSubjects()
   }, [])
+
+  useEffect(() => {
+    getHorario()
+  }, [seccionId, periodId])
 
   const getTeachers = () => {
     axiosInstance
@@ -373,28 +363,72 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     setOpen(true)
   }
 
+  // const handleDelete = (claseId: string) => {
+
+
+
+  //   const claseAEliminar = clases.find((clase) => clase.id === claseId)
+  //   if (claseAEliminar) {
+  //     // Remove all classes of the same subject
+  //     const clasesEliminadas = clases.filter((clase) => clase.subjectId === claseAEliminar.subjectId)
+
+  //     // Restablecer las horas disponibles para la subjectId eliminada
+  //     setHorasRestantes((prev) => {
+  //       // Buscar las horas semanales originales de la subjectId
+  //       const horasOriginales =
+  //         subjects.find((asignatura) => asignatura.id === claseAEliminar.subjectId)?.weekly_hours || 0
+
+  //       return {
+  //         ...prev,
+  //         [claseAEliminar.subjectId]: horasOriginales,
+  //       }
+  //     })
+
+  //     setClases(clases.filter((clase) => clase.subjectId !== claseAEliminar.subjectId))
+  //     setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.subjectId))
+  //   }
+  // }
+
   const handleDelete = (claseId: string) => {
-    const claseAEliminar = clases.find((clase) => clase.id === claseId)
+    const claseAEliminar = clases.find((clase) => clase.id === claseId);
     if (claseAEliminar) {
-      // Remove all classes of the same subject
-      const clasesEliminadas = clases.filter((clase) => clase.subjectId === claseAEliminar.subjectId)
-
-      // Restablecer las horas disponibles para la subjectId eliminada
-      setHorasRestantes((prev) => {
-        // Buscar las horas semanales originales de la subjectId
-        const horasOriginales =
-          subjects.find((asignatura) => asignatura.id === claseAEliminar.subjectId)?.weekly_hours || 0
-
-        return {
-          ...prev,
-          [claseAEliminar.subjectId]: horasOriginales,
-        }
-      })
-
-      setClases(clases.filter((clase) => clase.subjectId !== claseAEliminar.subjectId))
-      setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.subjectId))
+      axiosInstance
+        .delete(`schedules/${claseAEliminar.id}`)
+        .then((response) => {
+          // Remove all classes of the same subject
+          const clasesEliminadas = clases.filter((clase) => clase.subjectId === claseAEliminar.subjectId);
+  
+          // Restablecer las horas disponibles para la subjectId eliminada
+          setHorasRestantes((prev) => {
+            // Buscar las horas semanales originales de la subjectId
+            const horasOriginales =
+              subjects.find((asignatura) => asignatura.id === claseAEliminar.subjectId)?.weekly_hours || 0;
+  
+            return {
+              ...prev,
+              [claseAEliminar.subjectId]: horasOriginales,
+            };
+          });
+  
+          setClases(clases.filter((clase) => clase.subjectId !== claseAEliminar.subjectId));
+          setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.subjectId));
+  
+          Swal.fire({
+            title: "Bien!",
+            text: "Clase eliminada correctamente",
+            icon: "success",
+          });
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: "¡Error!",
+            text: error.response?.data?.message || "Ha ocurrido un error al eliminar la clase",
+            icon: "error",
+          });
+          console.error("Error:", error);
+        });
     }
-  }
+  };
 
   const checkOverlap = (
     day1: number,
@@ -639,7 +673,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
         // Si no estamos editando, añadir la asignatura a las creadas
         if (!editingClase) {
-          setCreatedSubjects((prev) => [...prev, nuevaClase.subjectId.toString()])
+          setCreatedSubjects((prev) => [...prev, nuevaClase.subjectId])
         }
 
         // Cerrar el diálogo
@@ -736,8 +770,115 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     console.log("Todas las clases agregadas:", clases)
   }
 
+
+
+  const getHorario = () => {
+    axiosInstance
+      .get("schedules/section-schedule-by-period", {
+        params: {
+          sectionId: seccionId,
+          periodId: periodId,
+        },
+      })
+      .then((response) => {
+        console.log(response.data.schedules.length)
+        if(response.data.schedules.length >= 1) {
+          seteditHorario(true)
+        }
+        const horarios = response.data.schedules.map((horario) => {
+          const colores = [
+            "#bbdefb", // Azul claro
+            "#c8e6c9", // Verde claro
+            "#f8bbd0", // Rosa claro
+            "#fff9c4", // Amarillo claro
+            "#ffccbc", // Naranja claro
+          ];
+          const generarColorAleatorio = () => colores[Math.floor(Math.random() * colores.length)];
+  
+          const formatTime = (isoString: string) => {
+            const date = new Date(isoString);
+            const hours = date.getUTCHours().toString().padStart(2, '0');
+            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+          };
+  
+          return {
+            id: horario.id.toString(),
+            teacherId: Number(horario.teacher.id),
+            subjectId: Number(horario.subject.id),
+            classroomId: Number(horario.classroom.id),
+            day_of_week: horario.day_of_week,
+            start_time: formatTime(horario.start_time),
+            end_time: formatTime(horario.end_time),
+            color: generarColorAleatorio(),
+            horasAsignadas: (new Date(horario.end_time).getTime() - new Date(horario.start_time).getTime()) / (1000 * 60 * 45), // Convertir minutos a horas de clase (45 minutos = 1 hora de clase)
+          };
+        });
+  
+        const usedSubjects = horarios.map(horario => horario.subjectId);
+  
+        setClases(horarios);
+        setCreatedSubjects(usedSubjects);
+  
+        Swal.fire({
+          title: "Bien!",
+          text: "Cargado el horario correctamente",
+          icon: "success",
+        });
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: error.response?.data?.message || "Ha ocurrido un error al cargar el horario",
+          icon: "error",
+        });
+        console.error("Error:", error);
+      });
+  };
+
   const handleGuardarHorario = () => {
-    console.log("Horario guardado:", clases)
+  
+    const schedules = clases.map((clase) => {
+      const formatToISO = (timeString: string) => {
+        const currentDate = new Date();
+        const [hours, minutes] = timeString.split(":");
+        currentDate.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
+        return currentDate.toISOString();
+      };
+  
+      return {
+        start_time: formatToISO(clase.start_time),
+        end_time: formatToISO(clase.end_time),
+        day_of_week: clase.day_of_week,
+        subjectId: clase.subjectId,
+        teacherId: clase.teacherId,
+        classroomId: clase.classroomId,
+        periodId: periodId,
+      };
+    });
+  
+    const result = {
+      sectionId: seccionId,
+      schedules: schedules,
+    };
+   
+      axiosInstance
+      .post("schedules", result)
+      .then((response) => {
+        Swal.fire({
+          title: "Bien!",
+          text: "Guardado Correctamente disponibles",
+          icon: "success",
+        })
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: error.response?.data?.message || "Ha ocurrido un error al guardar el horario",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
   }
 
   const printStyles = `
@@ -1017,7 +1158,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                       }
 
                       // Si no estamos editando, solo mostrar asignaturas que no están en uso
-                      return !createdSubjects.includes(asignatura.id.toString())
+                      return !createdSubjects.includes(asignatura.id)
                     })
                     .map((asignatura) => (
                       <MenuItem key={asignatura.id} value={asignatura.id}>

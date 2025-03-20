@@ -37,9 +37,10 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Schedule as ScheduleIcon, Search as SearchIcon } from "@mui/icons-material"
 import Swal from "sweetalert2"
 import axiosInstance from "../axios/axiosInstance"
+import HorarioProfesor from "./HorarioProfesor"
 
 interface availabilityDia {
   dayOfWeek: string
@@ -110,6 +111,43 @@ const Profesores: React.FC = () => {
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
+
+  const [periodos, setPeriodos] = useState([]); // Estado para los periodos
+  const [selectedPeriodo, setSelectedPeriodo] = useState<number | null>(null); // Estado para el periodo seleccionado
+  const [openHorario, setOpenHorario] = useState(false); // Estado para el diálogo del horario
+  const [selectedProfesor, setSelectedProfesor] = useState<Profesor | null>(null); // Estado para el profesor seleccionado
+
+  useEffect(() => {
+    getSubjects();
+    getPeriodos(); // Obtener los periodos al cargar el componente
+  }, []);
+
+  const getPeriodos = () => {
+    axiosInstance
+      .get("periods")
+      .then((response) => {
+        setPeriodos(response.data);
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "Ha ocurrido un error al cargar los periodos.",
+          icon: "error",
+        });
+        console.error("Error:", error);
+      });
+  };
+
+  const handleViewHorario = (profesor: Profesor) => {
+    setSelectedProfesor(profesor);
+    setOpenHorario(true);
+  };
+
+  const handleCloseHorario = () => {
+    setOpenHorario(false);
+    setSelectedProfesor(null);
+    setSelectedPeriodo(null);
+  };
 
   useEffect(() => {
     getSubjects()
@@ -434,6 +472,11 @@ const Profesores: React.FC = () => {
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Ver Horario">
+                    <IconButton onClick={() => handleViewHorario(profesor)}>
+                      <ScheduleIcon />
+                    </IconButton>
+                  </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -490,6 +533,11 @@ const Profesores: React.FC = () => {
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Ver Horario">
+                    <IconButton onClick={() => handleViewHorario(profesor)}>
+                      <ScheduleIcon />
+                    </IconButton>
+                  </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -674,6 +722,31 @@ const Profesores: React.FC = () => {
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={openHorario} onClose={handleCloseHorario} fullWidth maxWidth="md">
+        <DialogTitle>Horario del Profesor</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="dense">
+            <InputLabel id="periodo-label">Periodo</InputLabel>
+            <Select
+              labelId="periodo-label"
+              value={selectedPeriodo}
+              onChange={(e) => setSelectedPeriodo(e.target.value as number)}
+            >
+              {periodos.map((periodo) => (
+                <MenuItem key={periodo.id} value={periodo.id}>
+                  {periodo.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {selectedProfesor && selectedPeriodo && (
+            <HorarioProfesor profesor={selectedProfesor} periodoId={selectedPeriodo} />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHorario}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </>
