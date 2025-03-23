@@ -27,7 +27,8 @@ import {
   TableRow,
   IconButton,
   Tooltip,
-  Chip, // Añadido para mostrar las horas disponibles
+  Chip,
+  Link, // Añadido para mostrar las horas disponibles
 } from "@mui/material"
 import {
   Add as AddIcon,
@@ -108,49 +109,42 @@ interface SubjectTeacherMapping {
   [key: string]: string[] // subjectId: array of teacherIds
 }
 
-const teacherAvailability: TeacherAvailability = {
-  // Datos de ejemplo - reemplazar con datos reales de tu API
-  "1": {
-    Lunes: ["07:00-11:00", "14:00-16:00"],
-    Martes: ["10:00-12:00"],
-    Miércoles: ["09:00-11:00", "15:00-17:00"],
-    Jueves: [],
-    Viernes: ["13:00-15:00", "16:00-18:00"],
-  },
-  "2": {
-    Lunes: ["11:00-13:00"],
-    Martes: ["09:00-12:00", "14:00-16:00"],
-    Miércoles: [],
-    Jueves: ["10:00-12:00", "15:00-17:00"],
-    Viernes: ["09:00-11:00"],
-  },
-}
+// const teacherAvailability: TeacherAvailability = {
+//   // Datos de ejemplo - reemplazar con datos reales de tu API
+//   "1": {
+//     Lunes: ["07:00-11:00", "14:00-16:00"],
+//     Martes: ["10:00-12:00"],
+//     Miércoles: ["09:00-11:00", "15:00-17:00"],
+//     Jueves: [],
+//     Viernes: ["13:00-15:00", "16:00-18:00"],
+//   }
+// }
 
-// Add mock data for classroom availability
-const classroomAvailability: ClassroomAvailability = {
-  // Datos de ejemplo - reemplazar con datos reales de tu API
-  "1": {
-    Lunes: ["07:00-10:30", "14:00-16:00"],
-    Martes: ["07:00-12:00"],
-    Miércoles: ["09:00-11:00", "15:00-17:00"],
-    Jueves: ["07:00-10:30", "14:00-18:00"],
-    Viernes: ["13:00-15:00", "16:00-18:00"],
-  },
-  "2": {
-    Lunes: ["11:00-13:00", "16:00-18:00"],
-    Martes: ["09:00-12:00", "14:00-16:00"],
-    Miércoles: ["07:00-10:30", "14:00-16:00"],
-    Jueves: ["10:00-12:00", "15:00-17:00"],
-    Viernes: ["09:00-11:00", "14:00-18:00"],
-  },
-  "3": {
-    Lunes: ["07:00-09:00", "14:00-18:00"],
-    Martes: ["07:00-10:30", "14:00-16:00"],
-    Miércoles: ["10:00-12:00", "15:00-17:00"],
-    Jueves: ["07:00-09:00", "14:00-16:00"],
-    Viernes: ["07:00-10:30", "14:00-18:00"],
-  },
-}
+// // Add mock data for classroom availability
+// const classroomAvailability: ClassroomAvailability = {
+//   // Datos de ejemplo - reemplazar con datos reales de tu API
+//   "1": {
+//     Lunes: ["07:00-10:30", "14:00-16:00"],
+//     Martes: ["07:00-12:00"],
+//     Miércoles: ["09:00-11:00", "15:00-17:00"],
+//     Jueves: ["07:00-10:30", "14:00-18:00"],
+//     Viernes: ["13:00-15:00", "16:00-18:00"],
+//   },
+//   "2": {
+//     Lunes: ["11:00-13:00", "16:00-18:00"],
+//     Martes: ["09:00-12:00", "14:00-16:00"],
+//     Miércoles: ["07:00-10:30", "14:00-16:00"],
+//     Jueves: ["10:00-12:00", "15:00-17:00"],
+//     Viernes: ["09:00-11:00", "14:00-18:00"],
+//   },
+//   "3": {
+//     Lunes: ["07:00-09:00", "14:00-18:00"],
+//     Martes: ["07:00-10:30", "14:00-16:00"],
+//     Miércoles: ["10:00-12:00", "15:00-17:00"],
+//     Jueves: ["07:00-09:00", "14:00-16:00"],
+//     Viernes: ["07:00-10:30", "14:00-18:00"],
+//   },
+// }
 
 const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selectedSeccion, periodId }) => {
   const theme = useTheme()
@@ -183,6 +177,10 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   // Nuevos estados para el diálogo de disponibilidad
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false)
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("")
+  const [teacherAvailability, setTeacherAvailability ] = useState<any>("")
+  const [classroomAvailability, setClassroomAvailability ] = useState<any>("")
+
+
 
   // Add new state for classroom availability dialog
   const [classroomAvailabilityDialogOpen, setClassroomAvailabilityDialogOpen] = useState(false)
@@ -975,11 +973,57 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     setOpen(false)
   }
 
+  const obtenerDisponibilidadProfesor = async (teacherId: string) => {
+    try {
+      const response = await axiosInstance.get(`http://localhost:3000/api/teachers/${teacherId}/available-slots`);
+  
+      const disponibilidad = response.data.reduce((acc, schedule) => {
+        const day = schedule.dayOfWeek;
+        const freeSlots = schedule.freeSlots.map(slot => {
+          const startTime = extractTimeFromISO(slot.start_time);
+          const endTime = extractTimeFromISO(slot.end_time);
+          return `${startTime}-${endTime}`;
+        });
+  
+        if (!acc[day]) {
+          acc[day] = [];
+        }
+        acc[day].push(...freeSlots);
+        return acc;
+      }, {});
+
+      console.log(disponibilidad)
+
+  
+      setTeacherAvailability((prev) => ({
+        ...prev,
+        [teacherId]: disponibilidad,
+      }));
+    } catch (error) {
+      console.error("Error al obtener la disponibilidad del profesor:", error);
+      Swal.fire({
+        title: "¡Error!",
+        text: "Ha ocurrido un error al obtener la disponibilidad del profesor.",
+        icon: "error",
+      });
+    }
+  };
+  
+  const extractTimeFromISO = (isoString: string) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const hours = date.getUTCHours().toString().padStart(2, "0");
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+  
+
   // Nueva función para manejar la apertura del diálogo de disponibilidad
-  const handleShowAvailability = (teacherId: string) => {
-    setSelectedTeacherId(teacherId)
-    setAvailabilityDialogOpen(true)
-  }
+  const handleShowAvailability = async (teacherId: string) => {
+    setSelectedTeacherId(teacherId);
+    await obtenerDisponibilidadProfesor(teacherId);
+    setAvailabilityDialogOpen(true);
+  };
 
   // Función para cerrar el diálogo de disponibilidad
   const handleCloseAvailability = () => {
@@ -992,11 +1036,45 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     return teacher ? `${teacher.firstname} ${teacher.lastname}` : "Profesor"
   }
 
+  const obtenerDisponibilidadAula = async (classroomId: string) => {
+    try {
+      const response = await axiosInstance.get(`http://localhost:3000/api/classrooms/${classroomId}/available-slots`);
+  
+      const disponibilidad = response.data.reduce((acc, schedule) => {
+        const day = schedule.dayOfWeek;
+        const freeSlots = schedule.freeSlots.map(slot => {
+          const startTime = extractTimeFromISO(slot.start_time);
+          const endTime = extractTimeFromISO(slot.end_time);
+          return `${startTime}-${endTime}`;
+        });
+  
+        if (!acc[day]) {
+          acc[day] = [];
+        }
+        acc[day].push(...freeSlots);
+        return acc;
+      }, {});
+  
+      setClassroomAvailability((prev) => ({
+        ...prev,
+        [classroomId]: disponibilidad,
+      }));
+    } catch (error) {
+      console.error("Error al obtener la disponibilidad del aula:", error);
+      Swal.fire({
+        title: "¡Error!",
+        text: "Ha ocurrido un error al obtener la disponibilidad del aula.",
+        icon: "error",
+      });
+    }
+  };
+
   // Add function to handle opening classroom availability dialog
-  const handleShowClassroomAvailability = (classroomId: string) => {
-    setSelectedClassroomId(classroomId)
-    setClassroomAvailabilityDialogOpen(true)
-  }
+  const handleShowClassroomAvailability = async (classroomId: string) => {
+    setSelectedClassroomId(classroomId);
+    await obtenerDisponibilidadAula(classroomId);
+    setClassroomAvailabilityDialogOpen(true);
+  };
 
   // Add function to close classroom availability dialog
   const handleCloseClassroomAvailability = () => {
@@ -1505,6 +1583,13 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
           <Typography variant="caption" sx={{ display: "block", mt: 2, color: "text.secondary" }}>
             Nota: Esta información es provisional. Consulte con el profesor para confirmar su disponibilidad.
           </Typography>
+          <Typography variant="caption" sx={{ display: "block", mt: 2, color: "text.secondary" }}>
+    Para más detalles, visite la sección de{" "}
+    <Link href="/profesores" sx={{ color: "primary.main" }} target="_blank">
+      Profesores
+    </Link>.
+  </Typography>
+         
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseAvailability} color="primary">
