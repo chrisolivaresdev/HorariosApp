@@ -34,9 +34,10 @@ import {
   Checkbox,
   FormControlLabel,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Schedule as ScheduleIcon  , Search as SearchIcon } from "@mui/icons-material"
 import Swal from "sweetalert2"
 import axiosInstance from "../axios/axiosInstance"
+import HorarioAula from "./HorarioAula"
 
 interface availabilityDia {
   id?: string // Make id optional
@@ -105,6 +106,19 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     const hours = date.getUTCHours().toString().padStart(2, "0")
     const minutes = date.getUTCMinutes().toString().padStart(2, "0")
     return `${hours}:${minutes}`
+  }
+
+  const [openHorario, setOpenHorario] = useState(false)
+  const [selectedAula, setSelectedAula] = useState<Aula | null>(null)
+
+  const handleViewHorario = (aula: Aula) => {
+    setSelectedAula(aula)
+    setOpenHorario(true)
+  }
+
+  const handleCloseHorario = () => {
+    setOpenHorario(false)
+    setSelectedAula(null)
   }
   
   const getClassrooms = () => {
@@ -363,6 +377,11 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Ver Horario">
+                    <IconButton onClick={() => handleViewHorario(aula)}>
+                      <ScheduleIcon />
+                    </IconButton>
+                  </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -398,6 +417,11 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Ver Horario">
+                    <IconButton onClick={() => handleViewHorario(aula)}>
+                      <ScheduleIcon />
+                    </IconButton>
+                  </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -534,6 +558,15 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={openHorario} onClose={handleCloseHorario} fullWidth maxWidth="md">
+        <DialogTitle>Horario del Aula</DialogTitle>
+        <DialogContent>
+          {selectedAula && <HorarioAula aula={selectedAula} periodId={periodId} />}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHorario}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </>
