@@ -46,9 +46,6 @@ interface Seccion {
   quarter: string
 }
 
-// Opciones para los selectores
-const journeyOptions = ["1", "2", "3", "4"]
-const quarterOptions = ["1", "2", "3", ""]
 
 const Secciones: React.FC = () => {
   const [secciones, setSecciones] = useState<Seccion[]>([])
@@ -107,13 +104,15 @@ const Secciones: React.FC = () => {
     setOpen(true)
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
-      return; 
+      return;
     }
-    setOpen(false)
-    setErrors({})
-  }
+    setOpen(false);
+    setErrors({});
+  };
+  
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
@@ -132,7 +131,7 @@ const Secciones: React.FC = () => {
       if (editingSeccion) {
         axiosInstance
           .patch(`sections/${editingSeccion.id}`, newSeccion)
-          .then((response) => {
+          .then(() => {
             Swal.fire({
               title: "¡Bien!",
               text: "Sección actualizada correctamente.",
@@ -151,7 +150,7 @@ const Secciones: React.FC = () => {
       } else {
         axiosInstance
           .post("sections", newSeccion)
-          .then((response) => {
+          .then(() => {
             Swal.fire({
               title: "¡Bien!",
               text: "Sección creada correctamente.",
@@ -168,7 +167,7 @@ const Secciones: React.FC = () => {
             console.error("Error:", error)
           })
       }
-      handleClose()
+      handleClose("","")
     }
   }
 
@@ -197,7 +196,7 @@ const Secciones: React.FC = () => {
       if (result.isConfirmed) {
         axiosInstance
           .delete(`sections/${id}`)
-          .then((response) => {
+          .then(() => {
             Swal.fire("¡Eliminada!", "La sección ha sido eliminada.", "success")
             getSecciones()
           })
@@ -213,7 +212,7 @@ const Secciones: React.FC = () => {
     })
   }
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (event: any, newPage: number) => {
     setPage(newPage)
   }
 
@@ -393,7 +392,7 @@ const Secciones: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={() => handleClose("", "")}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>

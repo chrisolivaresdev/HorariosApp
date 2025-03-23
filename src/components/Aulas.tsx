@@ -58,14 +58,14 @@ interface Aula {
 interface AulasProps {
   periodId: number
   aulas: Aula[]
-  setAula: () => void
+  setAula: React.Dispatch<any>
   isMobile: boolean
 }
 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 // Generar rangos de horas (igual que en GeneradorHorario)
-const horas = []
+const horas:any = []
 let hora = 7
 let minutos = 0
 while (hora < 19 || (hora === 19 && minutos === 0)) {
@@ -158,7 +158,8 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     setOpen(true)
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
       return
     }
@@ -218,7 +219,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
       if (editingAula) {
         axiosInstance
           .patch(`classrooms/${editingAula.id}`, aulaToAdd)
-          .then((response) => {
+          .then(() => {
             Swal.fire({
               title: "¡Bien!",
               text: "Aula actualizado correctamente.",
@@ -238,7 +239,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
         const aulaToAddWithPeriod = { ...aulaToAdd, periodId }
         axiosInstance
           .post("classrooms", aulaToAddWithPeriod)
-          .then((response) => {
+          .then(() => {
             Swal.fire({
               title: "¡Bien!",
               text: "Aula creada correctamente.",
@@ -255,7 +256,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
             console.error("Error:", error)
           })
       }
-      handleClose()
+      handleClose("","")
     }
   }
 
@@ -266,7 +267,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     setOpen(true)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: any) => {
     Swal.fire({
       title: "¿Estás seguro de eliminar esta aula?",
       text: "¡No podrás deshacer esta acción!",
@@ -279,7 +280,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
       if (result.isConfirmed) {
         axiosInstance
           .delete(`/classrooms/${id}`)
-          .then((response) => {
+          .then(() => {
             Swal.fire("Eliminado!", "El aula ha sido eliminado.", "success")
             getClassrooms()
           })
@@ -295,7 +296,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     })
   }
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (newPage: number) => {
     setPage(newPage)
   }
 
@@ -520,7 +521,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
                           value={newAula.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time || ""}
                           onChange={(e) => handleHoraChange(dayOfWeek, "start_time", e.target.value as string)}
                         >
-                          {horas.map((hora) => (
+                          {horas.map((hora:any) => (
                             <MenuItem key={hora} value={hora}>
                               {hora}
                             </MenuItem>
@@ -534,11 +535,11 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
                           onChange={(e) => handleHoraChange(dayOfWeek, "end_time", e.target.value as string)}
                         >
                           {horas
-                            .filter((hora) => {
+                            .filter((hora:any) => {
                               const startTime = newAula.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time
                               return startTime ? hora > startTime : true
                             })
-                            .map((hora) => (
+                            .map((hora:any) => (
                               <MenuItem key={hora} value={hora}>
                                 {hora}
                               </MenuItem>
@@ -556,7 +557,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={() => {handleClose("","")} }>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>

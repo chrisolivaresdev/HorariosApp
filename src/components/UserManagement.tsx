@@ -51,10 +51,14 @@ const UserManagement: React.FC = () => {
     setOpen(true)
   }
 
-  const handleClose = () => {
-    setOpen(false)
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
+    if (reason === "backdropClick") {
+      return;
+    }
+    setOpen(false);
     setErrors({ username: "", password: "" })
-  }
+  };
 
   const getUsers = () => {
     axiosInstance
@@ -99,7 +103,7 @@ const UserManagement: React.FC = () => {
     if (editingUser) {
       axiosInstance
         .patch(`users/update/${editingUser.id}`, newUser)
-        .then((response) => {
+        .then(() => {
           Swal.fire({
             title: "Bien!",
             text: "Usuario editado correctamente!.",
@@ -118,7 +122,7 @@ const UserManagement: React.FC = () => {
     } else {
       axiosInstance
         .post("/auth/register", newUser)
-        .then((response) => {
+        .then(() => {
           Swal.fire({
             title: "Bien!",
             text: "Usuario creado correctamente!.",
@@ -135,7 +139,7 @@ const UserManagement: React.FC = () => {
           console.error("Error:", error)
         })
     }
-    handleClose()
+    handleClose("","")
   }
 
   const handleEdit = (user: User) => {
@@ -157,7 +161,7 @@ const UserManagement: React.FC = () => {
       if (result.isConfirmed) {
         axiosInstance
           .delete(`users/remove/${id}`)
-          .then((response) => {
+          .then(() => {
             Swal.fire("Eliminado!", "El usuario ha sido borrado.", "success")
           })
           .catch((error) => {
@@ -172,7 +176,7 @@ const UserManagement: React.FC = () => {
     })
   }
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = ( newPage: number) => {
     setPage(newPage)
   }
 
@@ -252,7 +256,7 @@ const UserManagement: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={()=>{handleClose("","")}}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>

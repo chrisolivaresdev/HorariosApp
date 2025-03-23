@@ -35,6 +35,7 @@ import {
   FormHelperText,
   Tooltip,
   IconButton,
+  SelectChangeEvent,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 import Swal from "sweetalert2"
@@ -115,7 +116,8 @@ const Asignaturas: React.FC = () => {
     setOpen(true)
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
       return; 
     }
@@ -163,7 +165,7 @@ const Asignaturas: React.FC = () => {
           weekly_hours: newAsignatura.weekly_hours,
         }
         axiosInstance.patch(`subjects/${editingAsignatura.id}`, editAsignatura)
-      .then(response => {
+      .then(() => {
         Swal.fire({
           title: 'Bien!',
           text: 'Asignatura editada correctamente!.',
@@ -180,7 +182,7 @@ const Asignaturas: React.FC = () => {
       getSubjects()
       } else {
         axiosInstance.post('/subjects', newAsignatura)
-        .then(response => {
+        .then(() => {
           Swal.fire({
             title: 'Bien!',
             text: 'Asignatura creada correctamente!.',
@@ -197,7 +199,7 @@ const Asignaturas: React.FC = () => {
           console.error('Error:', error);
         });
       }
-      handleClose()
+      handleClose("","")
     }
   }
 
@@ -219,7 +221,7 @@ const Asignaturas: React.FC = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         axiosInstance.delete(`subjects/${id}`)
-        .then(response => {
+        .then(() => {
           Swal.fire(
             'Eliminado!',
             'La asignatura ha sido eliminada.',
@@ -240,7 +242,7 @@ const Asignaturas: React.FC = () => {
     });
   }
 
-  const handlequartersChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handlequartersChange = (event: SelectChangeEvent<string[]>) => {
     const selectedquarters = event.target.value as string[]
     let updatedquarters = selectedquarters
 
@@ -256,7 +258,7 @@ const Asignaturas: React.FC = () => {
     })
   }
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = ( newPage: number) => {
     setPage(newPage)
   }
 
@@ -476,7 +478,7 @@ const Asignaturas: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={()=>handleClose("","")}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>

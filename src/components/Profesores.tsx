@@ -36,6 +36,7 @@ import {
   FormHelperText,
   IconButton,
   Tooltip,
+  SelectChangeEvent,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Schedule as ScheduleIcon, Search as SearchIcon } from "@mui/icons-material"
 import Swal from "sweetalert2"
@@ -61,7 +62,7 @@ interface Profesor {
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 // Generar rangos de horas (igual que en GeneradorHorario)
-const horas = []
+const horas: any = []
 let hora = 7
 let minutos = 0
 while (hora < 19 || (hora === 19 && minutos === 0)) {
@@ -74,7 +75,7 @@ while (hora < 19 || (hora === 19 && minutos === 0)) {
 }
 
 // Helper function to extract time from ISO string
-const extractTimeFromISO = (isoString) => {
+const extractTimeFromISO = (isoString: any) => {
   if (!isoString) return ""
   try {
     // Create a date object from the ISO string
@@ -195,7 +196,8 @@ const Profesores: React.FC = () => {
       })
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
       return
     }
@@ -256,7 +258,7 @@ const Profesores: React.FC = () => {
       if (editingProfesor) {
         axiosInstance
           .patch(`teachers/${editingProfesor.id}`, profesorToAdd)
-          .then((response) => {
+          .then(() => {
             Swal.fire({
               title: "¡Bien!",
               text: "Profesor actualizado correctamente.",
@@ -275,7 +277,7 @@ const Profesores: React.FC = () => {
       } else {
         axiosInstance
           .post("teachers", profesorToAdd)
-          .then((response) => {
+          .then(() => {
             Swal.fire({
               title: "¡Bien!",
               text: "Profesor creado correctamente.",
@@ -292,14 +294,14 @@ const Profesores: React.FC = () => {
             console.error("Error:", error)
           })
       }
-      handleClose()
+      handleClose("", "")
     }
   }
 
   const getSubjects = () => {
     axiosInstance
       .get("subjects")
-      .then((response) => {
+      .then((response: any) => {
         setsubjectIds(response.data)
       })
       .catch((error) => {
@@ -318,7 +320,7 @@ const Profesores: React.FC = () => {
 
     // Transform the subjects array to match what the Select component expects
     const subjectIds = Array.isArray(profesor.subjects)
-      ? profesor.subjects.map((subject) =>
+      ? profesor.subjects.map((subject: any) =>
           typeof subject === "object" && subject.subjectId ? subject.subjectId : subject,
         )
       : []
@@ -360,7 +362,7 @@ const Profesores: React.FC = () => {
       if (result.isConfirmed) {
         axiosInstance
           .delete(`teachers/${id}`)
-          .then((response) => {
+          .then(() => {
             Swal.fire("¡Eliminada!", "El profesor ha sido eliminad.", "success")
             getTeachers()
           })
@@ -394,7 +396,7 @@ const Profesores: React.FC = () => {
     setErrors((prev) => ({ ...prev, [`availability_${dayOfWeek}`]: "" }))
   }
 
-  const handlesubjectIdsChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handlesubjectIdsChange = (event: SelectChangeEvent<number[]>) => {
     setNewProfesor((prev) => ({
       ...prev,
       subjects: event.target.value as number[],
@@ -402,7 +404,7 @@ const Profesores: React.FC = () => {
     setErrors((prev) => ({ ...prev, subjects: "" }))
   }
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = ( newPage: number) => {
     setPage(newPage)
   }
 
@@ -457,9 +459,9 @@ const Profesores: React.FC = () => {
                   <Typography variant="body2">
                     Asignaturas:{" "}
                     {profesor.subjects
-                      .map((a) => {
+                      .map((a: any) => {
                         const subjectId = typeof a === "object" && a !== null && "subjectId" in a ? a.subjectId : a
-                        const subject = subjects.find((s) => s.id === subjectId)
+                        const subject: any = subjects.find((s: any) => s.id === subjectId)
                         return subject ? subject.name : `Asignatura ${subjectId}`
                       })
                       .join(", ")}
@@ -511,12 +513,12 @@ const Profesores: React.FC = () => {
                     })}
                   </TableCell>
                   <TableCell>
-                    {profesor.subjects.map((asignatura) => {
+                    {profesor.subjects.map((asignatura: any) => {
                       // Extract the subject ID correctly whether it's an object or direct ID
                       const subjectId =
                         typeof asignatura === "object" && asignatura.subjectId ? asignatura.subjectId : asignatura
                       // Find the corresponding subject from the subjects array
-                      const subject = subjects.find((s) => s.id === subjectId)
+                      const subject: any = subjects.find((s: any) => s.id === subjectId)
                       return (
                         <Chip
                           key={subjectId}
@@ -632,14 +634,14 @@ const Profesores: React.FC = () => {
                   multiple
                   value={newProfesor.subjects}
                   onChange={handlesubjectIdsChange}
-                  renderValue={(selected) => (
+                  renderValue={() => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {newProfesor.subjects.map((asignatura) => {
+                      {newProfesor.subjects.map((asignatura: any) => {
                         // Extract the subject ID correctly whether it's an object or direct ID
                         const subjectId =
                           typeof asignatura === "object" && asignatura.subjectId ? asignatura.subjectId : asignatura
                         // Find the corresponding subject from the subjects array
-                        const subject = subjects.find((s) => s.id === subjectId)
+                        const subject: any = subjects.find((s: any) => s.id === subjectId)
                         return (
                           <Chip
                             key={subjectId}
@@ -651,7 +653,7 @@ const Profesores: React.FC = () => {
                     </Box>
                   )}
                 >
-                  {subjects.map((asignatura) => (
+                  {subjects.map((asignatura: any) => (
                     <MenuItem key={asignatura.id} value={asignatura.id}>
                       {asignatura.name}
                     </MenuItem>
@@ -686,7 +688,7 @@ const Profesores: React.FC = () => {
                           value={newProfesor.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time || ""}
                           onChange={(e) => handleHoraChange(dayOfWeek, "start_time", e.target.value as string)}
                         >
-                          {horas.map((hora) => (
+                          {horas.map((hora: any) => (
                             <MenuItem key={hora} value={hora}>
                               {hora}
                             </MenuItem>
@@ -700,13 +702,13 @@ const Profesores: React.FC = () => {
                           onChange={(e) => handleHoraChange(dayOfWeek, "end_time", e.target.value as string)}
                         >
                           {horas
-                            .filter((hora) => {
+                            .filter((hora: any) => {
                               const startTime = newProfesor.availabilities.find(
                                 (d) => d.dayOfWeek === dayOfWeek,
                               )?.start_time
                               return startTime ? hora > startTime : true
                             })
-                            .map((hora) => (
+                            .map((hora: any) => (
                               <MenuItem key={hora} value={hora}>
                                 {hora}
                               </MenuItem>
@@ -724,7 +726,7 @@ const Profesores: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={()=>handleClose("","")}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
@@ -738,7 +740,7 @@ const Profesores: React.FC = () => {
               value={selectedPeriodo}
               onChange={(e) => setSelectedPeriodo(e.target.value as number)}
             >
-              {periodos.map((periodo) => (
+              {periodos.map((periodo:any) => (
                 <MenuItem key={periodo.id} value={periodo.id}>
                   {periodo.name}
                 </MenuItem>

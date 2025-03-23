@@ -3,17 +3,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { useState, useMemo, createContext, useContext } from "react"
+import { useState, useMemo, createContext } from "react"
 import { AnimatePresence } from "framer-motion"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
-import { MyProvider, MyContext } from './context/Context';
 import './App.css'
 
 export const ColorModeContext = createContext({ toggleColorMode: () => {} })
 
 function App() {
-  const context = useContext(MyContext);
 
   const [mode, setMode] = useState<"light" | "dark">("light")
 
@@ -104,7 +102,6 @@ function App() {
 
 
   return (
-    <MyProvider>
       <ColorModeContext.Provider value={colorMode}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
@@ -130,7 +127,6 @@ function App() {
           </Router>
         </ThemeProvider>
       </ColorModeContext.Provider>
-    </MyProvider>
   )
 }
 

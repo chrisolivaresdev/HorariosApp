@@ -4,17 +4,7 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import axiosInstance from "../axios/axiosInstance";
 
-interface Clase {
-    id: string
-    teacherId: string
-    subjectId: string
-    classroomId: string
-    day_of_week: string
-    start_time: string
-    end_time: string
-    color?: string
-    horasAsignadas: number
-  }
+
 
   interface availabilityDia {
     dayOfWeek: string
@@ -40,8 +30,8 @@ interface Clase {
  
 
 const HorarioProfesor: React.FC<HorarioProfesorProps> = ({ profesor, periodoId }) => {
-    const [clases, setClases] = useState<Clase[]>([]);
-    const [periodo, setPeriodo] = useState<string>("");
+    const [clases, setClases] = useState<any[]>([]);
+    const [periodo, setPeriodo] = useState<any>("");
     const horarioRef = useRef<HTMLDivElement>(null);
     const colorMap = new Map<string, string>();
 
@@ -81,16 +71,11 @@ const HorarioProfesor: React.FC<HorarioProfesorProps> = ({ profesor, periodoId }
     const fetchHorario = async () => {
       try {
         const [horarioResponse, periodoResponse] = await Promise.all([
-          axiosInstance.get(`schedules/teacher-schedule-by-period`, {
-            params: {
-              teacherId: profesor.id,
-              periodId: periodoId,
-            },
-          }),
+          axiosInstance.get(`schedules/teacher/${profesor.id}/period/${periodoId}`),
           axiosInstance.get(`periods/${periodoId}`),
         ]);
 
-        const horarios = horarioResponse.data.schedules.map((horario) => {
+        const horarios = horarioResponse.data.schedules[0].classes.map((horario:any) => {
           const formatTime = (isoString: string) => {
             const date = new Date(isoString);
             const hours = date.getUTCHours().toString().padStart(2, "0");

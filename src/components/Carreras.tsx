@@ -54,7 +54,8 @@ const Carreras: React.FC = () => {
     setOpen(true)
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
       return; 
     }
@@ -68,7 +69,7 @@ const Carreras: React.FC = () => {
       const carreraToAdd = { ...newCarrera, id: Date.now() }
       setCarreras([...carreras, carreraToAdd])
     }
-    handleClose()
+    handleClose("","")
   }
 
   const handleEdit = (carrera: Carrera) => {
@@ -182,7 +183,7 @@ const Carreras: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={()=>handleClose("","")}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>

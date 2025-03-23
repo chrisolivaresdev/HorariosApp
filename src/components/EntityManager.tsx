@@ -39,7 +39,8 @@ function EntityManager<T extends Entity>({ entities, setEntities, entityName, fi
     setOpen(true)
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
       return; 
     }
@@ -53,7 +54,7 @@ function EntityManager<T extends Entity>({ entities, setEntities, entityName, fi
     } else {
       setEntities([...entities, { ...currentEntity, id: Date.now() } as T])
     }
-    handleClose()
+    handleClose("","")
   }
 
   const handleEdit = (entity: T) => {
@@ -120,7 +121,7 @@ function EntityManager<T extends Entity>({ entities, setEntities, entityName, fi
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={()=> handleClose("","")}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>

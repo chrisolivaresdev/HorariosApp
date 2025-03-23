@@ -13,7 +13,6 @@ import {
   ListItemText,
   Box,
   Container,
-  useMediaQuery,
   useTheme,
   Button,
 } from "@mui/material"
@@ -22,7 +21,6 @@ import {
   Home,
   Book,
   Person,
-  School,
   Brightness4,
   Brightness7,
   ExitToApp,
@@ -36,17 +34,15 @@ import Profesores from "./Profesores"
 import Carreras from "./Carreras"
 import UserManagement from "./UserManagement"
 import { ColorModeContext } from "../App"
-import { MyContext } from '../context/Context';
 import Secciones from "./Secciones"
 
 
 
 const Dashboard = () => {
-  const context = useContext(MyContext);
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
+  // const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
   const colorMode = useContext(ColorModeContext)
 
   const toggleDrawer = () => {

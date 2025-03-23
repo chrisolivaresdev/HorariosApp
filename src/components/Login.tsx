@@ -2,18 +2,16 @@
 
 import type React from "react"
 
-import { useContext, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { TextField, Button, Container, Typography, Box, Paper } from "@mui/material"
 import { motion } from "framer-motion"
 import { LockOutlined } from "@mui/icons-material"
 import axiosInstance from "../axios/axiosInstance"
-import { MyContext } from '../context/Context';
 import Swal from "sweetalert2"
 
 
 const Login = () => {
-  const context = useContext(MyContext);
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const navigate = useNavigate()

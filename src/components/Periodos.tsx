@@ -72,7 +72,7 @@ const Periodos: React.FC = () => {
     classrooms: [],
   })
   const [selectedPeriodo, setSelectedPeriodo] = useState<Periodo | null>(null)
-  const [aula, setAula] = useState([])
+  const [aula, setAula] = useState<any>([])
   const [tabValue, setTabValue] = useState(0)
   const [editingPeriodo, setEditingPeriodo] = useState<Periodo | null>(null)
   const [nombreError, setNombreError] = useState("")
@@ -127,7 +127,8 @@ const Periodos: React.FC = () => {
     setOpen(true)
   }
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event:any, reason: string) => {
+    console.log(event)
     if (reason === "backdropClick") {
       return; 
     }
@@ -167,7 +168,7 @@ const Periodos: React.FC = () => {
     if (editingPeriodo) {
       axiosInstance
         .patch(`/periods/${editingPeriodo.id}`, period)
-        .then((response) => {
+        .then(() => {
           Swal.fire({
             title: "Bien!",
             text: "Periodo editado correctamente!.",
@@ -186,7 +187,7 @@ const Periodos: React.FC = () => {
     } else {
       axiosInstance
         .post("/periods", period)
-        .then((response) => {
+        .then(() => {
           Swal.fire({
             title: "Bien!",
             text: "Periodo creado correctamente!.",
@@ -203,7 +204,7 @@ const Periodos: React.FC = () => {
           console.error("Error:", error)
         })
     }
-    handleClose()
+    handleClose("","")
   }
 
   const handleEdit = (periodo: Periodo) => {
@@ -231,7 +232,7 @@ const Periodos: React.FC = () => {
       if (result.isConfirmed) {
         axiosInstance
           .delete(`/periods/${id}`)
-          .then((response) => {
+          .then(() => {
             Swal.fire("Eliminado!", "El periodo ha sido eliminado.", "success")
             getPeriods()
           })
@@ -258,13 +259,13 @@ const Periodos: React.FC = () => {
     setTabValue(newValue)
   }
 
-  const handleSeccionChange = (event) => {
+  const handleSeccionChange = (event:any) => {
     const seccionId = event.target.value
     const seccion = secciones.find((s) => s.id === seccionId) || null
     setSelectedSeccion(seccion)
   }
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString:any) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("es-ES", {
       year: "numeric",
@@ -476,7 +477,7 @@ const Periodos: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
+          <Button onClick={()=> handleClose("","")}>Cancelar</Button>
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
@@ -528,7 +529,7 @@ const Periodos: React.FC = () => {
           >
             {selectedSeccion && (
               <GeneradorHorario
-                periodId={selectedPeriodo.id}
+                periodId={selectedPeriodo?.id}
                 seccionId={selectedSeccion.id}
                 selectedSeccion={{
                   nombreSeccion: selectedSeccion.name,

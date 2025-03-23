@@ -3,18 +3,8 @@ import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import axiosInstance from "../axios/axiosInstance"
+import Swal from "sweetalert2"
 
-interface Clase {
-  id: string
-  teacherId: string
-  subjectId: string
-  classroomId: string
-  day_of_week: string
-  start_time: string
-  end_time: string
-  color?: string
-  horasAsignadas: number
-}
 
 interface Aula {
   id: string
@@ -33,10 +23,11 @@ interface availabilityDia {
 
 interface HorarioAulaProps {
   aula: Aula
+  periodId:any
 }
 
 const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
-  const [clases, setClases] = useState<Clase[]>([])
+  const [clases, setClases] = useState<any[]>([])
   const horarioRef = useRef<HTMLDivElement>(null)
   const colorMap = new Map<string, string>()
 
@@ -72,17 +63,12 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
     return nuevoColor
   }
 
+
   useEffect(() => {
     const fetchHorario = async () => {
       try {
-        const response = await axiosInstance.get(`schedules/classroom-schedule`, {
-          params: {
-            classroomId: aula.id,
-            periodId: periodId,
-          },
-        })
-
-        const horarios = response.data.schedules.map((horario) => {
+        const response = await axiosInstance.get(`http://localhost:3000/api/schedules/classroom/${aula.id}/period/${periodId}`)
+        const horarios = response.data.schedules[0].classes.map((horario: any) => {
           const formatTime = (isoString: string) => {
             const date = new Date(isoString)
             const hours = date.getUTCHours().toString().padStart(2, "0")
@@ -95,9 +81,11 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
             subjectName: horario.subject.name,
             sectionName: horario.section.name,
             teacherId: Number(horario.teacher.id),
+            teacherName: horario.teacher.firstname,
+            teacherLastName: horario.teacher.lastname,
             subjectId: Number(horario.subject.id),
-            aulaName: horario.classroom.name,
-            classroomId: Number(horario.classroom.id),
+            aulaName: horario.classroom?.name,
+            classroomId: Number(horario.classroom?.id),
             day_of_week: horario.day_of_week,
             start_time: formatTime(horario.start_time),
             end_time: formatTime(horario.end_time),
@@ -107,13 +95,31 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
         })
 
         setClases(horarios)
-      } catch (error) {
+        Swal.fire({
+          title: "¡Bien!",
+          text: "Horario cargado correctamente.",
+          icon: "success",
+        })
+      } catch (error:any) {
+        if (error.response && error.response.status === 404) {
+          Swal.fire({
+            title: "¡Error!",
+            text: "No se encontraron horarios para el aula en el período dado.",
+            icon: "error",
+          })
+        } else {
+          Swal.fire({
+            title: "¡Error!",
+            text: "Error al cargar el horario del aula.",
+            icon: "error",
+          })
+        }
         console.error("Error al cargar el horario del aula:", error)
       }
     }
-
+    
     fetchHorario()
-  }, [aula.id])
+  }, [aula.id, periodId])
 
   const handleDownloadPDF = async () => {
     if (horarioRef.current) {
@@ -191,7 +197,7 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
                               {clase.sectionName}
                             </Typography>
                             <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                              {clase.teacherId}
+                            {clase.teacherName} {clase.teacherLastName}
                             </Typography>
                           </Box>
                         )}
