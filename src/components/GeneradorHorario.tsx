@@ -573,7 +573,6 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
     const nuevaClaseConHoras = {
       ...nuevaClase,
       horasAsignadas: horasAsignadas,
-      id: editingClase ? editingClase.id : Date.now().toString(),
       color: editingClase ? editingClase.color : generarColorAleatorio(nuevaClase.subjectId),
     }
 
@@ -650,7 +649,6 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
           if (horasExtras) {
             const extraHoursClass = {
               ...horasExtras,
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
               teacherId: nuevaClase.teacherId,
               subjectId: nuevaClase.subjectId,
               classroomId: horasExtras.classroomId || nuevaClase.classroomId,
