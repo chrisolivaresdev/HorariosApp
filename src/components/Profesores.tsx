@@ -230,6 +230,7 @@ const Profesores: React.FC = () => {
     const currentDate = new Date()
     const [hours, minutes] = timeString.split(":")
     currentDate.setUTCHours(hours, minutes, 0, 0)
+    console.log(currentDate.toISOString())
     return currentDate.toISOString()
   }
 
@@ -240,6 +241,7 @@ const Profesores: React.FC = () => {
       end_time: formatToISO(obj.end_time), // Now this will be the exact time string like "08:30"
     }))
 
+
     const profesorToAdd = {
       firstname: newProfesor.firstname,
       lastname: newProfesor.lastname,
@@ -248,6 +250,8 @@ const Profesores: React.FC = () => {
       subjects: newProfesor.subjects,
       availabilities: availabilities,
     }
+
+
     if (validateForm()) {
       if (editingProfesor) {
         axiosInstance
@@ -270,7 +274,7 @@ const Profesores: React.FC = () => {
           })
       } else {
         axiosInstance
-          .post("teachers", newProfesor)
+          .post("teachers", profesorToAdd)
           .then((response) => {
             Swal.fire({
               title: "¡Bien!",

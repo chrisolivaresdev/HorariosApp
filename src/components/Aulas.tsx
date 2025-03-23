@@ -31,16 +31,27 @@ import {
   FormHelperText,
   Tooltip,
   IconButton,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
 import Swal from "sweetalert2"
 import axiosInstance from "../axios/axiosInstance"
 
+interface availabilityDia {
+  id?: string // Make id optional
+  dayOfWeek: string
+  start_time: string
+  end_time: string
+}
+
 interface Aula {
-  id:   string,
+  id: string
   name: string
   type: string
   max_capacity: number
+  current_capacity: number
+  availabilities: availabilityDia[]
 }
 
 interface AulasProps {
@@ -50,6 +61,21 @@ interface AulasProps {
   isMobile: boolean
 }
 
+const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
+// Generar rangos de horas (igual que en GeneradorHorario)
+const horas = []
+let hora = 7
+let minutos = 0
+while (hora < 19 || (hora === 19 && minutos === 0)) {
+  horas.push(`${hora.toString().padStart(2, "0")}:${minutos.toString().padStart(2, "0")}`)
+  minutos += 45
+  if (minutos >= 60) {
+    hora++
+    minutos = minutos - 60
+  }
+}
+
 const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => {
   const [open, setOpen] = useState(false)
   const [editingAula, setEditingAula] = useState<Aula | null>(null)
@@ -57,12 +83,15 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     name: "",
     type: "",
     max_capacity: 0,
+    current_capacity: 0,
+    availabilities: [],
   })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredAulas, setFilteredAulas] = useState<Aula[]>(aulas)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
   useEffect(() => {
     console.log(aulas)
     const filtered = aulas?.filter((aula) => aula.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -70,17 +99,34 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     setPage(0)
   }, [searchTerm, aulas])
 
+  const extractTimeFromISO = (isoString: string) => {
+    if (!isoString) return ""
+    const date = new Date(isoString)
+    const hours = date.getUTCHours().toString().padStart(2, "0")
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0")
+    return `${hours}:${minutes}`
+  }
+  
   const getClassrooms = () => {
     axiosInstance
       .get(`classrooms/find-by-period/${periodId}`)
       .then((response) => {
-        setAula(response.data)
-        console.log(response.data)
+        const transformedData = response.data.map((aula: Aula) => ({
+          ...aula,
+          availabilities: aula.availabilities.map((avail) => ({
+            ...avail,
+            start_time: extractTimeFromISO(avail.start_time),
+            end_time: extractTimeFromISO(avail.end_time),
+          })),
+        }))
+        setAula(transformedData)
+        console.log(transformedData)
       })
       .catch((error) => {
+        console.log(error)
         Swal.fire({
           title: "¡Error!",
-          text: "A ocurrido un error.",
+          text: "A ocurrido un error en el get.",
           icon: "error",
         })
         console.error("Error:", error)
@@ -93,14 +139,14 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
 
   const handleOpen = () => {
     setEditingAula(null)
-    setNewAula({ name: "", type: "", max_capacity: 0 })
+    setNewAula({ name: "", type: "", max_capacity: 0, current_capacity: 0, availabilities: [] })
     setErrors({})
     setOpen(true)
   }
 
   const handleClose = (event, reason) => {
     if (reason === "backdropClick") {
-      return; 
+      return
     }
 
     setOpen(false)
@@ -114,54 +160,86 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     if (!newAula.max_capacity || newAula.max_capacity <= 0) {
       newErrors.max_capacity = "La capacidad máxima debe ser mayor que 0"
     }
+    if (newAula.current_capacity < 0) {
+      newErrors.current_capacity = "La capacidad actual no puede ser negativa"
+    }
+    if (newAula.availabilities.length === 0) {
+      newErrors.availabilities = "Debe seleccionar al menos un día de disponibilidad"
+    }
+    newAula.availabilities.forEach((d) => {
+      if (!d.start_time || !d.end_time) {
+        newErrors[`availability_${d.dayOfWeek}`] = "Debe seleccionar hora de inicio y fin"
+      } else if (d.end_time <= d.start_time) {
+        newErrors[`availability_${d.dayOfWeek}`] = "La hora de fin debe ser mayor que la hora de inicio"
+      }
+    })
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
+  const formatToISO = (timeString: string) => {
+    const currentDate = new Date()
+    const [hours, minutes] = timeString.split(":")
+    currentDate.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0)
+    return currentDate.toISOString()
+  }
+
   const handleSave = () => {
+    const availabilities = newAula.availabilities.map((obj) => ({
+      id: obj.id, // Include the id here
+      dayOfWeek: obj.dayOfWeek,
+      start_time: formatToISO(obj.start_time),
+      end_time: formatToISO(obj.end_time),
+    }))
+  
+    const aulaToAdd = {
+      name: newAula.name,
+      type: newAula.type,
+      max_capacity: newAula.max_capacity,
+      current_capacity: newAula.current_capacity,
+      availabilities: availabilities,
+    }
+  
     if (validateForm()) {
       if (editingAula) {
-        const aulaToAdd = { name: newAula.name, type: newAula.type, max_capacity: newAula.max_capacity }
         axiosInstance
-        .patch(`classrooms/${editingAula.id}`, aulaToAdd)
-        .then((response) => {
-          Swal.fire({
-            title: "¡Bien!",
-            text: "Aula actualizado correctamente.",
-            icon: "success",
+          .patch(`classrooms/${editingAula.id}`, aulaToAdd)
+          .then((response) => {
+            Swal.fire({
+              title: "¡Bien!",
+              text: "Aula actualizado correctamente.",
+              icon: "success",
+            })
+            getClassrooms()
           })
-          getClassrooms()
-        })
-        .catch((error) => {
-          Swal.fire({
-            title: "¡Error!",
-            text: "Ha ocurrido un error al actualizar el aula.",
-            icon: "error",
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "Ha ocurrido un error al actualizar el aula.",
+              icon: "error",
+            })
+            console.error("Error:", error)
           })
-          console.error("Error:", error)
-        })
-   
       } else {
-        console.log(periodId)
-        const aulaToAdd = { ...newAula, periodId }
+        const aulaToAddWithPeriod = { ...aulaToAdd, periodId }
         axiosInstance
-        .post("classrooms", aulaToAdd)
-        .then((response) => {
-          Swal.fire({
-            title: "¡Bien!",
-            text: "Aula creada correctamente.",
-            icon: "success",
+          .post("classrooms", aulaToAddWithPeriod)
+          .then((response) => {
+            Swal.fire({
+              title: "¡Bien!",
+              text: "Aula creada correctamente.",
+              icon: "success",
+            })
+            getClassrooms()
           })
-          getClassrooms()
-        })
-        .catch((error) => {
-          Swal.fire({
-            title: "¡Error!",
-            text: "Ha ocurrido un error al crear el aula.",
-            icon: "error",
+          .catch((error) => {
+            Swal.fire({
+              title: "¡Error!",
+              text: "Ha ocurrido un error al crear el aula.",
+              icon: "error",
+            })
+            console.error("Error:", error)
           })
-          console.error("Error:", error)
-        })
       }
       handleClose()
     }
@@ -212,6 +290,36 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
     setPage(0)
   }
 
+  const handleHoraChange = (dayOfWeek: string, tipo: "start_time" | "end_time", valor: string) => {
+    setNewAula((prev) => ({
+      ...prev,
+      availabilities: prev.availabilities.map((d) => {
+        if (d.dayOfWeek === dayOfWeek) {
+          if (tipo === "start_time") {
+            return { ...d, [tipo]: valor, end_time: "" }
+          } else {
+            return { ...d, [tipo]: valor }
+          }
+        }
+        return d
+      }),
+    }))
+    setErrors((prev) => ({ ...prev, [`availability_${dayOfWeek}`]: "" }))
+  }
+
+  const handleAvailabilityChange = (dayOfWeek: string, checked: boolean) => {
+    setNewAula((prev) => {
+      let updatedAvailability = [...prev.availabilities]
+      if (checked) {
+        updatedAvailability.push({ dayOfWeek, start_time: "", end_time: "" })
+      } else {
+        updatedAvailability = updatedAvailability.filter((d) => d.dayOfWeek !== dayOfWeek)
+      }
+      return { ...prev, availabilities: updatedAvailability }
+    })
+    setErrors((prev) => ({ ...prev, availabilities: "" }))
+  }
+
   return (
     <>
       <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -241,31 +349,33 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
                 <CardContent>
                   <Typography variant="h6">{aula.name}</Typography>
                   <Typography variant="body2">Tipo: {aula.type}</Typography>
-                  <Typography variant="body2">Capacidad: {aula.max_capacity}</Typography>
+                  <Typography variant="body2">Capacidad Actual: {aula.current_capacity}</Typography>
+                  <Typography variant="body2">Capacidad Máxima: {aula.max_capacity}</Typography>
                 </CardContent>
                 <CardActions>
-                     <Tooltip title="Editar">
-                      <IconButton onClick={() => handleEdit(aula)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar">
-                      <IconButton onClick={() => handleDelete(aula.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                  <Tooltip title="Editar">
+                    <IconButton onClick={() => handleEdit(aula)}>
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar">
+                    <IconButton onClick={() => handleDelete(aula.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
           ))}
         </Grid>
       ) : (
-          <TableContainer component={Paper}>
+        <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell>Nombre del Aula</TableCell>
                 <TableCell>Tipo de Aula</TableCell>
+                <TableCell>Capacidad Actual</TableCell>
                 <TableCell>Capacidad Máxima</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
@@ -275,9 +385,10 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
                 <TableRow key={aula.id}>
                   <TableCell>{aula.name}</TableCell>
                   <TableCell>{aula.type}</TableCell>
+                  <TableCell>{aula.current_capacity}</TableCell>
                   <TableCell>{aula.max_capacity}</TableCell>
                   <TableCell>
-                  <Tooltip title="Editar">
+                    <Tooltip title="Editar">
                       <IconButton onClick={() => handleEdit(aula)}>
                         <EditIcon />
                       </IconButton>
@@ -303,7 +414,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
         <DialogTitle>{editingAula ? "Editar Aula" : "Agregar Nueva Aula"}</DialogTitle>
         <DialogContent>
           <TextField
@@ -336,6 +447,19 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
           </FormControl>
           <TextField
             margin="dense"
+            label="Capacidad Actual"
+            type="number"
+            fullWidth
+            value={newAula.current_capacity}
+            onChange={(e) => {
+              setNewAula({ ...newAula, current_capacity: Number(e.target.value) })
+              setErrors({ ...errors, current_capacity: "" })
+            }}
+            error={!!errors.current_capacity}
+            helperText={errors.current_capacity}
+          />
+           <TextField
+            margin="dense"
             label="Capacidad Máxima"
             type="number"
             fullWidth
@@ -347,6 +471,65 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
             error={!!errors.max_capacity}
             helperText={errors.max_capacity}
           />
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+            Disponibilidad
+          </Typography>
+          {errors.availabilities && <FormHelperText error>{errors.availabilities}</FormHelperText>}
+          <Grid container spacing={2}>
+            {diasSemana.map((dayOfWeek) => (
+              <Grid item xs={12} sm={6} md={4} key={dayOfWeek}>
+                <Paper elevation={2} sx={{ p: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={newAula.availabilities.some((d) => d.dayOfWeek === dayOfWeek)}
+                        onChange={(e) => handleAvailabilityChange(dayOfWeek, e.target.checked)}
+                      />
+                    }
+                    label={dayOfWeek}
+                  />
+                  {newAula.availabilities.some((d) => d.dayOfWeek === dayOfWeek) && (
+                    <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+                      <FormControl fullWidth error={!!errors[`availability_${dayOfWeek}`]}>
+                        <InputLabel>Hora de inicio</InputLabel>
+                        <Select
+                          value={newAula.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time || ""}
+                          onChange={(e) => handleHoraChange(dayOfWeek, "start_time", e.target.value as string)}
+                        >
+                          {horas.map((hora) => (
+                            <MenuItem key={hora} value={hora}>
+                              {hora}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth error={!!errors[`availability_${dayOfWeek}`]}>
+                        <InputLabel>Hora de fin</InputLabel>
+                        <Select
+                          value={newAula.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.end_time || ""}
+                          onChange={(e) => handleHoraChange(dayOfWeek, "end_time", e.target.value as string)}
+                        >
+                          {horas
+                            .filter((hora) => {
+                              const startTime = newAula.availabilities.find((d) => d.dayOfWeek === dayOfWeek)?.start_time
+                              return startTime ? hora > startTime : true
+                            })
+                            .map((hora) => (
+                              <MenuItem key={hora} value={hora}>
+                                {hora}
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  )}
+                  {errors[`availability_${dayOfWeek}`] && (
+                    <FormHelperText error>{errors[`availability_${dayOfWeek}`]}</FormHelperText>
+                  )}
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
@@ -358,4 +541,3 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
 }
 
 export default Aulas
-

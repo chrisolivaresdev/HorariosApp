@@ -633,6 +633,10 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
           icon: "success",
         })
 
+        // console.log(editingClase)
+
+        // handleGuardarHorario()
+
         // Ahora actualizar el estado después de la validación exitosa
         setClases((prevClases) => {
           // Asegurarse de que prevClases sea un array
@@ -845,8 +849,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
         currentDate.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
         return currentDate.toISOString();
       };
-  
-      return {
+
+      let objeto: any = {
         start_time: formatToISO(clase.start_time),
         end_time: formatToISO(clase.end_time),
         day_of_week: clase.day_of_week,
@@ -855,13 +859,65 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
         classroomId: clase.classroomId,
         periodId: periodId,
       };
+      
+      if (clase.id) {
+        objeto.id = clase.id;
+      }
+  
+      return objeto;
     });
   
     const result = {
       sectionId: seccionId,
       schedules: schedules,
     };
-   
+
+    console.log(clases)
+
+    
+    if(editingClase){
+
+      console.log(editingClase)
+
+      // const schedulesEditing = editingClase.map((clase) => {
+      //   const formatToISO = (timeString: string) => {
+      //     const currentDate = new Date();
+      //     const [hours, minutes] = timeString.split(":");
+      //     currentDate.setUTCHours(parseInt(hours), parseInt(minutes), 0, 0);
+      //     return currentDate.toISOString();
+      //   };
+    
+      //   return {
+      //     start_time: formatToISO(clase.start_time),
+      //     end_time: formatToISO(clase.end_time),
+      //     day_of_week: clase.day_of_week,
+      //     subjectId: clase.subjectId,
+      //     teacherId: clase.teacherId,
+      //     classroomId: clase.classroomId,
+      //     periodId: periodId,
+      //   };
+      // });
+
+      // result.schedules = schedulesEditing
+
+      axiosInstance
+      .patch(`schedules`, result)
+      .then((response) => {
+        Swal.fire({
+          title: "Bien!",
+          text: "Actualizado correctamente disponibles",
+          icon: "success",
+        })
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: error.response?.data?.message || "Ha ocurrido un error al guardar el horario",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  } else {
       axiosInstance
       .post("schedules", result)
       .then((response) => {
@@ -880,6 +936,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
         console.error("Error:", error)
       })
   }
+    }
+   
+     
 
   const printStyles = `
     @media print {
