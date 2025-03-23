@@ -176,10 +176,10 @@ const UserManagement: React.FC = () => {
     })
   }
 
-  const handleChangePage = ( newPage: number) => {
-    setPage(newPage)
-  }
-
+  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
+    console.log(event)
+    setPage(newPage);
+  };
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(Number.parseInt(event.target.value, 10))
     setPage(0)

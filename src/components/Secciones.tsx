@@ -213,6 +213,7 @@ const Secciones: React.FC = () => {
   }
 
   const handleChangePage = (event: any, newPage: number) => {
+    console.log(event)
     setPage(newPage)
   }
 

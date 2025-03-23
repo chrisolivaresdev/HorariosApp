@@ -256,6 +256,7 @@ const Periodos: React.FC = () => {
   }
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    console.log(event)
     setTabValue(newValue)
   }
 
@@ -535,6 +536,7 @@ const Periodos: React.FC = () => {
                   nombreSeccion: selectedSeccion.name,
                   trayecto: selectedSeccion.journey,
                   trimestre: selectedSeccion.quarter,
+                  studentCount: selectedSeccion.total_students,
                 }}
               />
             )}

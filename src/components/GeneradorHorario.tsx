@@ -72,6 +72,7 @@ interface HorasExtras {
 
 
 const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selectedSeccion, periodId }) => {
+  console.log(seccionId, selectedSeccion, periodId)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("md"))
   const [open, setOpen] = useState(false)
@@ -111,6 +112,11 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   // Add new state for classroom availability dialog
   const [classroomAvailabilityDialogOpen, setClassroomAvailabilityDialogOpen] = useState(false)
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>("")
+
+  const [classroomWarning, setClassroomWarning] = useState<string | null>(null);
+  const [classroomError, setClassroomError] = useState<string | null>(null);
+  const [originalHorasExtras, setOriginalHorasExtras] = useState<HorasExtras | null>(null);
+
 
   const horarioRef = useRef<HTMLDivElement>(null)
 
@@ -248,11 +254,10 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
   }
 
   const handleEdit = (clase: Clase) => {
-    setClaseOriginal(clase)
-    setEditingClase(clase)
-    console.log(clase)
+    setClaseOriginal(clase);
+    setEditingClase(clase);
     setNuevaClase({
-      id:Number(clase.id) || null, 
+      id: Number(clase.id) || null,
       teacherId: clase.teacherId,
       subjectId: clase.subjectId,
       classroomId: clase.classroomId,
@@ -260,61 +265,37 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
       start_time: clase.start_time,
       end_time: clase.end_time,
       horasAsignadas: clase.horasAsignadas,
-    })
-
-    // Remove all classes of the same subject from the schedule
-    const clasesRemovidas = clases.filter((c) => c.subjectId === clase.subjectId)
-    setClases(clases.filter((c) => c.subjectId !== clase.subjectId))
-
-    // Reset hours for the subject being edited
+    });
+  
+    const clasesRemovidas = clases.filter((c) => c.subjectId === clase.subjectId);
+    setClases(clases.filter((c) => c.subjectId !== clase.subjectId));
+  
     setHorasRestantes((prev) => ({
       ...prev,
-      [clase.subjectId]: subjects.find((asignatura:any) => asignatura.id === clase.subjectId)?.weekly_hours || 0,
-    }))
-
-    // Find extra hours associated with this subject
-    const horasExtrasAsociadas = clasesRemovidas.find((c) => c.day_of_week !== clase.day_of_week)
-
+      [clase.subjectId]: subjects.find((asignatura: any) => asignatura.id === clase.subjectId)?.weekly_hours || 0,
+    }));
+  
+    const horasExtrasAsociadas = clasesRemovidas.find((c) => c.day_of_week !== clase.day_of_week);
+  
     if (horasExtrasAsociadas) {
-      setHorasExtras({
+      const extraHours = {
         day_of_week: horasExtrasAsociadas.day_of_week,
         start_time: horasExtrasAsociadas.start_time,
         end_time: horasExtrasAsociadas.end_time,
         horasAsignadas: horasExtrasAsociadas.horasAsignadas,
         classroomId: horasExtrasAsociadas.classroomId,
-      })
+      };
+      setHorasExtras(extraHours);
+      setOriginalHorasExtras(extraHours);
     } else {
-      setHorasExtras(null)
+      setHorasExtras(null);
+      setOriginalHorasExtras(null);
     }
-
-    setOpen(true)
-  }
-
-  // const handleDelete = (claseId: string) => {
+  
+    setOpen(true);
+  };
 
 
-
-  //   const claseAEliminar = clases.find((clase) => clase.id === claseId)
-  //   if (claseAEliminar) {
-  //     // Remove all classes of the same subject
-  //     const clasesEliminadas = clases.filter((clase) => clase.subjectId === claseAEliminar.subjectId)
-
-  //     // Restablecer las horas disponibles para la subjectId eliminada
-  //     setHorasRestantes((prev) => {
-  //       // Buscar las horas semanales originales de la subjectId
-  //       const horasOriginales =
-  //         subjects.find((asignatura) => asignatura.id === claseAEliminar.subjectId)?.weekly_hours || 0
-
-  //       return {
-  //         ...prev,
-  //         [claseAEliminar.subjectId]: horasOriginales,
-  //       }
-  //     })
-
-  //     setClases(clases.filter((clase) => clase.subjectId !== claseAEliminar.subjectId))
-  //     setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.subjectId))
-  //   }
-  // }
 
   const handleDelete = (claseId: string) => {
     const claseAEliminar = clases.find((clase) => clase.id === claseId);
@@ -330,8 +311,19 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
         cancelButtonText: "Cancelar",
       }).then((result) => {
         if (result.isConfirmed) {
+          // Encontrar las horas extras asociadas a la clase
+          const horasExtrasAsociadas = clases.filter(
+            (clase) =>
+              clase.subjectId === claseAEliminar.subjectId &&
+              clase.teacherId === claseAEliminar.teacherId &&
+              clase.day_of_week !== claseAEliminar.day_of_week
+          );
+  
+          // Crear un array con los IDs de las clases a eliminar
+          const idsAEliminar = [Number(claseAEliminar.id), ...horasExtrasAsociadas.map((clase) => Number(clase.id))];
+  
           const payload = {
-            classIds: [Number(claseAEliminar.id)],
+            classIds: idsAEliminar,
             scheduleId: scheduleId,
           };
   
@@ -349,7 +341,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                 };
               });
   
-              setClases(clases.filter((clase) => clase.subjectId !== claseAEliminar.subjectId));
+              // Eliminar las clases del estado
+              setClases(clases.filter((clase) => !idsAEliminar.includes(Number(clase.id))));
               setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.subjectId));
   
               Swal.fire({
@@ -501,7 +494,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
       return
     }
 
-    const schedules = [
+    const schedules:any = [
       {
         start_time: nuevaClase.start_time,
         end_time: nuevaClase.end_time,
@@ -889,24 +882,31 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
 
   const handleCancel = () => {
     if (claseOriginal) {
-      // Get all classes with the same subject ID that were removed
-      const clasesOriginales = clases.filter((c) => c.subjectId === claseOriginal.subjectId)
-
-      // If no classes with this subject ID exist in the current state, restore the original ones
-      if (clasesOriginales.length === 0) {
-        // Find all classes that were removed when editing started
-        const toRestore = clases.filter((c) => c.id !== claseOriginal.id && c.subjectId === claseOriginal.subjectId)
-
-        // Add back the original class and any associated classes
-        setClases((prevClases) => [...prevClases, claseOriginal, ...toRestore])
-      }
+      setClases((prevClases) => {
+        const clasesFiltradas = prevClases.filter((c) => c.subjectId !== claseOriginal.subjectId);
+  
+        const clasesRestauradas = [claseOriginal];
+        if (originalHorasExtras) {
+          clasesRestauradas.push({
+            ...originalHorasExtras,
+            teacherId: claseOriginal.teacherId,
+            subjectId: claseOriginal.subjectId,
+            classroomId: originalHorasExtras.classroomId || claseOriginal.classroomId,
+            color: claseOriginal.color,
+            horasAsignadas: calcularHorasAsignadas(originalHorasExtras.start_time, originalHorasExtras.end_time),
+          });
+        }
+  
+        return [...clasesFiltradas, ...clasesRestauradas];
+      });
     }
-
-    setClaseOriginal(null)
-    setEditingClase(null)
-    setHorasExtras(null)
-    setOpen(false)
-  }
+  
+    setClaseOriginal(null);
+    setEditingClase(null);
+    setHorasExtras(originalHorasExtras);
+    setOriginalHorasExtras(null);
+    setOpen(false);
+  };
 
   const obtenerDisponibilidadProfesor = async (teacherId: string) => {
     try {
@@ -1288,35 +1288,60 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
             </Grid>
             {/* Replace the classroom select in the dialog with this updated version */}
             <Grid item xs={12} sm={6}>
-              <Box sx={{ display: "flex", alignItems: "flex-end" }}>
-                <FormControl fullWidth>
-                  <InputLabel>Aula</InputLabel>
-                  <Select
-                    value={nuevaClase.classroomId}
-                    onChange={(e) => {
-                      setNuevaClase({ ...nuevaClase, classroomId: e.target.value as string })
-                      setSelectedClassroomId(e.target.value as string)
-                    }}
-                  >
-                    {classrooms.map((classroomId:any) => (
-                      <MenuItem key={classroomId.id} value={classroomId.id}>
-                        {`${classroomId.name} - Capacidad ${classroomId.max_capacity}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                {nuevaClase.classroomId && (
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleShowClassroomAvailability(nuevaClase.classroomId)}
-                    sx={{ ml: 1 }}
-                    title="Ver disponibilidad del aula"
-                  >
-                    <CalendarIcon />
-                  </IconButton>
-                )}
-              </Box>
-            </Grid>
+  <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+    <FormControl fullWidth>
+      <InputLabel>Aula</InputLabel>
+      <Select
+        value={nuevaClase.classroomId}
+        onChange={(e) => {
+          const selectedClassroomId = e.target.value as string;
+          setNuevaClase({ ...nuevaClase, classroomId: selectedClassroomId });
+          setSelectedClassroomId(selectedClassroomId);
+
+          const selectedClassroom = classrooms.find((classroom: any) => classroom.id === selectedClassroomId);
+          if (selectedClassroom) {
+            if (selectedSeccion.studentCount > selectedClassroom.max_capacity) {
+              setClassroomError("La sección supera la capacidad máxima del aula.");
+              setClassroomWarning(null);
+            } else if (selectedSeccion.studentCount > selectedClassroom.current_capacity) {
+              setClassroomWarning("La sección supera la capacidad actual del aula.");
+              setClassroomError(null);
+            } else {
+              setClassroomWarning(null);
+              setClassroomError(null);
+            }
+          }
+        }}
+      >
+        {classrooms.map((classroomId: any) => (
+          <MenuItem key={classroomId.id} value={classroomId.id}>
+            {`${classroomId.name} - Capacidad ${classroomId.max_capacity}`}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+    {nuevaClase.classroomId && (
+      <IconButton
+        color="primary"
+        onClick={() => handleShowClassroomAvailability(nuevaClase.classroomId)}
+        sx={{ ml: 1 }}
+        title="Ver disponibilidad del aula"
+      >
+        <CalendarIcon />
+      </IconButton>
+    )}
+  </Box>
+  {classroomWarning && (
+    <Typography variant="caption" sx={{ color: "warning.main" }}>
+      {classroomWarning}
+    </Typography>
+  )}
+  {classroomError && (
+    <Typography variant="caption" sx={{ color: "error.main" }}>
+      {classroomError}
+    </Typography>
+  )}
+</Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Día</InputLabel>
@@ -1372,21 +1397,21 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({ seccionId, selected
                 Horas Extras
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={3}>
-                  <FormControl fullWidth>
-                    <InputLabel>Día</InputLabel>
-                    <Select
-                      value={horasExtras?.day_of_week ?? ""}
-                      onChange={(e) => setHorasExtras((prev: any) => ({ ...prev, day_of_week: Number(e.target.value) }))}
-                    >
-                      {dias.map((day_of_week) => (
-                        <MenuItem key={day_of_week} value={day_of_week}>
-                          {day_of_week}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+              <Grid item xs={12} sm={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Día</InputLabel>
+                  <Select
+                    value={horasExtras?.day_of_week ?? ""}
+                    onChange={(e) => setHorasExtras((prev: any) => ({ ...prev, day_of_week: e.target.value as string }))}
+                  >
+                    {dias.map((day_of_week) => (
+                      <MenuItem key={day_of_week} value={day_of_week}>
+                        {day_of_week}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
                 <Grid item xs={12} sm={3}>
                   <FormControl fullWidth>
                     <InputLabel>Hora de Inicio</InputLabel>

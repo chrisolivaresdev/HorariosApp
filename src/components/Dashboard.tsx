@@ -15,6 +15,7 @@ import {
   Container,
   useTheme,
   Button,
+  ListItemButton,
 } from "@mui/material"
 import {
   Menu as MenuIcon,
@@ -102,26 +103,26 @@ const Dashboard = () => {
       >
         <Toolbar />
         <List>
-          {menuItems.map((item) => (
-            <ListItem
-              button
-              key={item.text}
-              onClick={() => {
-                navigate(item.path)
-                toggleDrawer()
-              }}
-              sx={{
-                transition: "background-color 0.3s",
-                "&:hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.04)",
-                },
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-          ))}
-        </List>
+  {menuItems.map((item) => (
+    <ListItem key={item.text} disablePadding>
+      <ListItemButton
+        onClick={() => {
+          navigate(item.path)
+          toggleDrawer()
+        }}
+        sx={{
+          transition: "background-color 0.3s",
+          "&:hover": {
+            backgroundColor: "rgba(0, 0, 0, 0.04)",
+          },
+        }}
+      >
+        <ListItemIcon>{item.icon}</ListItemIcon>
+        <ListItemText primary={item.text} />
+      </ListItemButton>
+    </ListItem>
+  ))}
+</List>
       </Drawer>
       <Box
         component={motion.main}
