@@ -44,11 +44,11 @@ import axiosInstance from "../axios/axiosInstance"
 import HorarioProfesor from "./HorarioProfesor"
 
 interface availabilityDia {
-  dayOfWeek: string
-  start_time: string
-  end_time: string
+  id?: number; // Hacer que el campo id sea opcional
+  dayOfWeek: string;
+  start_time: string;
+  end_time: string;
 }
-
 interface Profesor {
   id: number
   firstname: string
@@ -238,12 +238,12 @@ const Profesores: React.FC = () => {
 
   const handleSave = () => {
     const availabilities = newProfesor.availabilities.map((obj) => ({
+      id: obj.id, // Incluir el ID si existe
       dayOfWeek: obj.dayOfWeek,
-      start_time: formatToISO(obj.start_time), // Now this will be the exact time string like "07:00"
-      end_time: formatToISO(obj.end_time), // Now this will be the exact time string like "08:30"
-    }))
-
-
+      start_time: formatToISO(obj.start_time),
+      end_time: formatToISO(obj.end_time),
+    }));
+  
     const profesorToAdd = {
       firstname: newProfesor.firstname,
       lastname: newProfesor.lastname,
@@ -251,9 +251,8 @@ const Profesores: React.FC = () => {
       entry_date: newProfesor.entry_date,
       subjects: newProfesor.subjects,
       availabilities: availabilities,
-    }
-
-
+    };
+  
     if (validateForm()) {
       if (editingProfesor) {
         axiosInstance
@@ -263,17 +262,17 @@ const Profesores: React.FC = () => {
               title: "¡Bien!",
               text: "Profesor actualizado correctamente.",
               icon: "success",
-            })
-            getTeachers()
+            });
+            getTeachers();
           })
           .catch((error) => {
             Swal.fire({
               title: "¡Error!",
               text: "Ha ocurrido un error al actualizar el profesor.",
               icon: "error",
-            })
-            console.error("Error:", error)
-          })
+            });
+            console.error("Error:", error);
+          });
       } else {
         axiosInstance
           .post("teachers", profesorToAdd)
@@ -282,21 +281,21 @@ const Profesores: React.FC = () => {
               title: "¡Bien!",
               text: "Profesor creado correctamente.",
               icon: "success",
-            })
-            getTeachers()
+            });
+            getTeachers();
           })
           .catch((error) => {
             Swal.fire({
               title: "¡Error!",
               text: "Ha ocurrido un error al crear el profesor.",
               icon: "error",
-            })
-            console.error("Error:", error)
-          })
+            });
+            console.error("Error:", error);
+          });
       }
-      handleClose("", "")
+      handleClose("", "");
     }
-  }
+  };
 
   const getSubjects = () => {
     axiosInstance
@@ -315,38 +314,39 @@ const Profesores: React.FC = () => {
   }
 
   const handleEdit = (profesor: Profesor) => {
-    setEditingProfesor(profesor)
-    console.log("Profesor a editar:", profesor)
-
+    setEditingProfesor(profesor);
+    console.log("Profesor a editar:", profesor);
+  
     // Transform the subjects array to match what the Select component expects
     const subjectIds = Array.isArray(profesor.subjects)
       ? profesor.subjects.map((subject: any) =>
           typeof subject === "object" && subject.subjectId ? subject.subjectId : subject,
         )
-      : []
-
+      : [];
+  
     // Transform availabilities to extract just the time part from ISO strings
     const transformedAvailabilities = profesor.availabilities.map((avail) => {
-      const startTime = extractTimeFromISO(avail.start_time)
-      const endTime = extractTimeFromISO(avail.end_time)
-      console.log(`Día: ${avail.dayOfWeek}, Original start_time: ${avail.start_time}, Extraído: ${startTime}`)
-      console.log(`Día: ${avail.dayOfWeek}, Original end_time: ${avail.end_time}, Extraído: ${endTime}`)
-
+      const startTime = extractTimeFromISO(avail.start_time);
+      const endTime = extractTimeFromISO(avail.end_time);
+      console.log(`Día: ${avail.dayOfWeek}, Original start_time: ${avail.start_time}, Extraído: ${startTime}`);
+      console.log(`Día: ${avail.dayOfWeek}, Original end_time: ${avail.end_time}, Extraído: ${endTime}`);
+  
       return {
+        id: avail.id, // Incluir el ID
         dayOfWeek: avail.dayOfWeek,
         start_time: startTime,
         end_time: endTime,
-      }
-    })
-
+      };
+    });
+  
     setNewProfesor({
       ...profesor,
       entry_date: new Date(profesor.entry_date).toISOString().split("T")[0],
       subjects: subjectIds,
       availabilities: transformedAvailabilities,
-    })
-    setOpen(true)
-  }
+    });
+    setOpen(true);
+  };
 
   const handleDelete = (id: number) => {
     Swal.fire({
@@ -383,18 +383,13 @@ const Profesores: React.FC = () => {
       ...prev,
       availabilities: prev.availabilities.map((d) => {
         if (d.dayOfWeek === dayOfWeek) {
-          // Just use the time string directly without creating a Date object
-          if (tipo === "start_time") {
-            return { ...d, [tipo]: valor, end_time: "" }
-          } else {
-            return { ...d, [tipo]: valor }
-          }
+          return { ...d, [tipo]: valor };
         }
-        return d
+        return d;
       }),
-    }))
-    setErrors((prev) => ({ ...prev, [`availability_${dayOfWeek}`]: "" }))
-  }
+    }));
+    setErrors((prev) => ({ ...prev, [`availability_${dayOfWeek}`]: "" }));
+  };
 
   const handlesubjectIdsChange = (event: SelectChangeEvent<number[]>) => {
     setNewProfesor((prev) => ({
@@ -416,16 +411,16 @@ const Profesores: React.FC = () => {
 
   const handleavailabilityChange = (dayOfWeek: string, checked: boolean) => {
     setNewProfesor((prev) => {
-      let updatedAvailability = [...prev.availabilities]
+      let updatedAvailability = [...prev.availabilities];
       if (checked) {
-        updatedAvailability.push({ dayOfWeek, start_time: "", end_time: "" })
+        updatedAvailability.push({ id: undefined, dayOfWeek, start_time: "", end_time: "" });
       } else {
-        updatedAvailability = updatedAvailability.filter((d) => d.dayOfWeek !== dayOfWeek)
+        updatedAvailability = updatedAvailability.filter((d) => d.dayOfWeek !== dayOfWeek);
       }
-      return { ...prev, availabilities: updatedAvailability }
-    })
-    setErrors((prev) => ({ ...prev, availabilities: "" }))
-  }
+      return { ...prev, availabilities: updatedAvailability };
+    });
+    setErrors((prev) => ({ ...prev, availabilities: "" }));
+  };
 
   return (
     <>
