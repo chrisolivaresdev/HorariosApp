@@ -270,7 +270,9 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
       horasAsignadas: clase.horasAsignadas,
     })
 
+    
     const clasesRemovidas = clases.filter((c) => c.subjectId === clase.subjectId)
+    console.log(clasesRemovidas)
     setClases(clases.filter((c) => c.subjectId !== clase.subjectId))
 
     setHorasRestantes((prev) => ({
@@ -278,8 +280,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
       [clase.subjectId]: subjects.find((asignatura: any) => asignatura.id === clase.subjectId)?.weekly_hours || 0,
     }))
 
-    const horasExtrasAsociadas = clasesRemovidas.find((c) => c.day_of_week !== clase.day_of_week)
-    console.log(horasExtrasAsociadas)
+    const horasExtrasAsociadas = clasesRemovidas.find((c) => c.id !== clase.id)
 
     if (horasExtrasAsociadas) {
       const extraHours = {
