@@ -726,7 +726,7 @@ const Profesores: React.FC = () => {
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={openHorario} onClose={handleCloseHorario} fullWidth maxWidth="md">
+      <Dialog open={openHorario} onClose={handleCloseHorario} fullWidth maxWidth="xl">
         <DialogTitle>Horario del Profesor</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="dense">

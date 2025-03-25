@@ -562,7 +562,7 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
           <Button onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={openHorario} onClose={handleCloseHorario} fullWidth maxWidth="md">
+      <Dialog open={openHorario} onClose={handleCloseHorario} fullWidth maxWidth="xl">
         <DialogTitle>Horario del Aula</DialogTitle>
         <DialogContent>
           {selectedAula && <HorarioAula aula={selectedAula} periodId={periodId} />}

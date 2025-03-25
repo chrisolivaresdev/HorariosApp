@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useRef } from "react"
+"use client"
+
+import type React from "react"
+import { useEffect, useState, useRef } from "react"
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Typography } from "@mui/material"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import axiosInstance from "../axios/axiosInstance"
 import Swal from "sweetalert2"
-
 
 interface Aula {
   id: string
@@ -23,11 +25,12 @@ interface availabilityDia {
 
 interface HorarioAulaProps {
   aula: Aula
-  periodId:any
+  periodId: any
 }
 
 const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
   const [clases, setClases] = useState<any[]>([])
+  const [periodo, setPeriodo] = useState<any>("")
   const horarioRef = useRef<HTMLDivElement>(null)
   const colorMap = new Map<string, string>()
 
@@ -63,12 +66,15 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
     return nuevoColor
   }
 
-
   useEffect(() => {
     const fetchHorario = async () => {
       try {
-        const response = await axiosInstance.get(`http://localhost:3000/api/schedules/classroom/${aula.id}/period/${periodId}`)
-        const horarios = response.data.schedules[0].classes.map((horario: any) => {
+        const [horarioResponse, periodoResponse] = await Promise.all([
+          axiosInstance.get(`http://localhost:3000/api/schedules/classroom/${aula.id}/period/${periodId}`),
+          axiosInstance.get(`periods/${periodId}`),
+        ])
+
+        const horarios = horarioResponse.data.schedules[0].classes.map((horario: any) => {
           const formatTime = (isoString: string) => {
             const date = new Date(isoString)
             const hours = date.getUTCHours().toString().padStart(2, "0")
@@ -95,12 +101,13 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
         })
 
         setClases(horarios)
+        setPeriodo(periodoResponse.data)
         Swal.fire({
           title: "¡Bien!",
           text: "Horario cargado correctamente.",
           icon: "success",
         })
-      } catch (error:any) {
+      } catch (error: any) {
         if (error.response && error.response.status === 404) {
           Swal.fire({
             title: "¡Error!",
@@ -117,7 +124,7 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
         console.error("Error al cargar el horario del aula:", error)
       }
     }
-    
+
     fetchHorario()
   }, [aula.id, periodId])
 
@@ -128,11 +135,11 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
       })
       const imgData = canvas.toDataURL("image/png")
 
-      const imgWidth = 210 * 0.9
+      const imgWidth = 210 * 0.85
       const imgHeight = (canvas.height * imgWidth) / canvas.width
 
       const pdf = new jsPDF({
-        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
+        orientation: "landscape",
         unit: "mm",
         format: "a4",
       })
@@ -147,6 +154,7 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
     }
   }
 
+
   return (
     <Box>
       <Box ref={horarioRef} sx={{ maxWidth: "1000px", margin: "0 auto" }}>
@@ -154,21 +162,42 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
           <Typography variant="h6" gutterBottom sx={{ fontSize: "1rem" }}>
             Horario del {aula.name}
           </Typography>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+            {`${periodo.name}`}
+          </Typography>
         </Box>
         <TableContainer component={Paper} sx={{ maxWidth: "1000px" }}>
-          <Table size="small">
+          <Table size="small" className="horario-table" sx={{ tableLayout: "fixed", minWidth: "900px" }}>
             <TableHead>
               <TableRow>
-                <TableCell>Hora</TableCell>
+                <TableCell sx={{ padding: "4px 8px", fontSize: "0.75rem", width: "60px", minWidth: "60px" }}>
+                  Hora
+                </TableCell>
                 {diasSemana.map((dia) => (
-                  <TableCell key={dia}>{dia}</TableCell>
+                  <TableCell
+                    key={dia}
+                    sx={{
+                      borderLeft: "1px solid rgba(224, 224, 224, 1)",
+                      padding: "4px 8px",
+                      fontSize: "0.75rem",
+                      width: "130px",
+                      minWidth: "130px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {dia}
+                  </TableCell>
                 ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {horas.map((hora) => (
                 <TableRow key={hora}>
-                  <TableCell sx={{ padding: "4px 8px", fontSize: "0.75rem" }}>{hora}</TableCell>
+                  <TableCell sx={{ padding: "4px 8px", fontSize: "0.75rem", width: "60px", minWidth: "60px" }}>
+                    {hora}
+                  </TableCell>
                   {diasSemana.map((day_of_week) => {
                     const clase = clases?.find(
                       (clase) => clase.day_of_week === day_of_week && clase.start_time <= hora && clase.end_time > hora
@@ -176,28 +205,55 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
                     return (
                       <TableCell
                         key={`${day_of_week}-${hora}`}
+                        className={clase ? "has-class" : ""}
                         sx={{
                           backgroundColor: clase?.color,
-                          height: "60px",
+                          height: "50px",
+                          maxHeight: "50px",
+                          width: "130px",
+                          minWidth: "130px",
                           padding: "2px 4px",
                           borderLeft: "1px solid rgba(224, 224, 224, 1)",
+                          overflow: "hidden",
                           ...(clase && {
                             borderBottom: "none",
+                            border: "1px solid rgba(0, 0, 0, 0.5)", // Darker border for cells with classes
                           }),
                         }}
                       >
                         {clase && hora === clase.start_time && (
-                          <Box className="clase-content" sx={{ padding: "2px" }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                              <Typography variant="subtitle1" sx={{ fontSize: "0.8rem", fontWeight: "bold" }}>
-                                {clase.subjectName}
-                              </Typography>
-                            </Box>
-                            <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
+                          <Box className="clase-content" sx={{ padding: "1px", overflow: "hidden" }}>
+                            <Typography
+                              variant="subtitle1"
+                              className="clase-title"
+                              sx={{
+                                fontWeight: "bold",
+                                width: "100%",
+                              }}
+                            >
+                              {clase.subjectName}
+                            </Typography>
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                fontSize: "0.7rem",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
                               {clase.sectionName}
                             </Typography>
-                            <Typography variant="body1" sx={{ fontSize: "0.7rem" }}>
-                            {clase.teacherName} {clase.teacherLastName}
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                fontSize: "0.7rem",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {clase.teacherName} {clase.teacherLastName}
                             </Typography>
                           </Box>
                         )}
