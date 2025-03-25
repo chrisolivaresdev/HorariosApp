@@ -234,12 +234,15 @@ const Periodos: React.FC = () => {
           .delete(`/periods/${id}`)
           .then(() => {
             Swal.fire("Eliminado!", "El periodo ha sido eliminado.", "success")
+            // Ocultar los detalles del periodo eliminado
+            setSelectedPeriodo(null)
+            // Volver a llamar a getPeriods para actualizar la tabla
             getPeriods()
           })
           .catch((error) => {
             Swal.fire({
               title: "¡Error!",
-              text: "A ocurrido un error.",
+              text: "Ha ocurrido un error.",
               icon: "error",
             })
             console.error("Error:", error)

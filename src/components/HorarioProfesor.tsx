@@ -142,7 +142,7 @@ const HorarioProfesor: React.FC<HorarioProfesorProps> = ({ profesor, periodoId }
       pdf.setFontSize(16)
       pdf.setFontSize(12)
       pdf.addImage(imgData, "PNG", xPosition, yPosition, imgWidth, imgHeight)
-      pdf.save("horario_profesor.pdf")
+      pdf.save(`Horario_${profesor.firstname}-${profesor.lastname}.pdf`)
     }
   }
 
