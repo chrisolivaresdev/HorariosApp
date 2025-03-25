@@ -699,7 +699,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
         scale: 3, // Escala para mejor calidad
         useCORS: true,
         logging: false,
-        letterRendering: true,
+        // letterRendering: true,
         width: horarioRef.current.offsetWidth,
         height: horarioRef.current.offsetHeight,
         windowWidth: horarioRef.current.offsetWidth,
@@ -709,7 +709,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
 
       // Calcular tamaño óptimo para el PDF
       const pdfWidth = 210 // Ancho A4 en mm
-      const pdfHeight = 297 // Alto A4 en mm
+      // const pdfHeight = 297 // Alto A4 en mm
       const imgWidth = pdfWidth * 0.98 // Usar 98% del ancho
       const imgHeight = (canvas.height * imgWidth) / canvas.width
 
