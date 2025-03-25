@@ -59,7 +59,7 @@ const Dashboard = () => {
   let menuItems = [
   ]
   if (localStorage.getItem('role') === "ADMIN") {
-    menuItems = [{ text: "User Management", icon: <SupervisorAccount />, path: "/user-management" }]
+    menuItems = [{ text: "Creacion de usuarios", icon: <SupervisorAccount />, path: "/user-management" }]
   }else {
     menuItems = [
       { text: "Periodos", icon: <Home />, path: "/" },

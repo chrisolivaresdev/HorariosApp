@@ -538,6 +538,7 @@ const Periodos: React.FC = () => {
                   trimestre: selectedSeccion.quarter,
                   studentCount: selectedSeccion.total_students,
                 }}
+                handleCloseScheduleGenerator={handleCloseScheduleGenerator}
               />
             )}
           </Box>
