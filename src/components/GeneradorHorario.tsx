@@ -317,22 +317,17 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
         cancelButtonText: "Cancelar",
       }).then((result) => {
         if (result.isConfirmed) {
-          // Encontrar las horas extras asociadas a la clase
-          const horasExtrasAsociadas = clases.filter(
-            (clase) =>
-              clase.subjectId === claseAEliminar.subjectId &&
-              clase.teacherId === claseAEliminar.teacherId &&
-              clase.day_of_week !== claseAEliminar.day_of_week,
-          )
-
+          // Encontrar todas las clases asociadas a la misma materia
+          const clasesAsociadas = clases.filter((clase) => clase.subjectId === claseAEliminar.subjectId)
+  
           // Crear un array con los IDs de las clases a eliminar
-          const idsAEliminar = [Number(claseAEliminar.id), ...horasExtrasAsociadas.map((clase) => Number(clase.id))]
-
+          const idsAEliminar = clasesAsociadas.map((clase) => Number(clase.id))
+  
           const payload = {
             classIds: idsAEliminar,
             scheduleId: scheduleId,
           }
-
+  
           axiosInstance
             .delete("/classes", { data: payload })
             .then(() => {
@@ -340,17 +335,17 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
               setHorasRestantes((prev) => {
                 const horasOriginales =
                   subjects.find((asignatura: any) => asignatura.id === claseAEliminar.subjectId)?.weekly_hours || 0
-
+  
                 return {
                   ...prev,
                   [claseAEliminar.subjectId]: horasOriginales,
                 }
               })
-
+  
               // Eliminar las clases del estado
               setClases(clases.filter((clase) => !idsAEliminar.includes(Number(clase.id))))
               setCreatedSubjects((prev) => prev.filter((subject) => subject !== claseAEliminar.subjectId))
-
+  
               Swal.fire({
                 title: "Bien!",
                 text: "Clase eliminada correctamente",

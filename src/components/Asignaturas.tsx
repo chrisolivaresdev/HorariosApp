@@ -431,6 +431,8 @@ const Asignaturas: React.FC = () => {
                   <MenuItem value={"3"}>Prosecución</MenuItem>
                   <MenuItem value={"4"}>3</MenuItem>
                   <MenuItem value={"5"}>4</MenuItem>
+                  <MenuItem value={"6"}>5</MenuItem>
+
                 </Select>
                 {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
               </FormControl>

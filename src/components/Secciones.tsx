@@ -34,7 +34,7 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from "@mui/icons-material"
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, AddCircle as AddCircleIcon } from "@mui/icons-material"
 import axiosInstance from "../axios/axiosInstance"
 import Swal from "sweetalert2"
 
@@ -221,6 +221,56 @@ const Secciones: React.FC = () => {
     setRowsPerPage(Number.parseInt(event.target.value, 10))
     setPage(0)
   }
+  
+  const handleAdvance = (seccion: Seccion) => {
+    let newJourney = seccion.journey
+    let newQuarter = seccion.quarter
+  
+    if (newQuarter > "3") {
+      newQuarter = "1"
+      newJourney = (parseInt(seccion.journey) + 1).toString()
+    }
+  
+    if (newJourney > "5") {
+      Swal.fire({
+        title: "¡Error!",
+        text: "No se puede avanzar más allá del trayecto 5 trimestre 3.",
+        icon: "error",
+      })
+      return
+    }
+    if (newJourney === "0" && newQuarter === "1") {
+      newJourney = "1"
+      newQuarter = "1"
+    }
+
+    const updatedSeccion: any = {
+      ...seccion,
+      journey: newJourney,
+      quarter: newQuarter,
+    }
+  
+    const { id, userId, createdAt, updatedAt, deletedAt, classes, ...seccionData } = updatedSeccion
+  
+    axiosInstance
+      .patch(`sections/${seccion.id}`, seccionData)
+      .then(() => {
+        Swal.fire({
+          title: "¡Bien!",
+          text: "Sección avanzada correctamente.",
+          icon: "success",
+        })
+        getSecciones()
+      })
+      .catch((error) => {
+        Swal.fire({
+          title: "¡Error!",
+          text: "Ha ocurrido un error al avanzar la sección.",
+          icon: "error",
+        })
+        console.error("Error:", error)
+      })
+  }
 
   return (
     <>
@@ -265,6 +315,16 @@ const Secciones: React.FC = () => {
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Avanzar">
+                    <span>
+                      <IconButton
+                        onClick={() => handleAdvance(seccion)}
+                        disabled={seccion.journey === "5" && seccion.quarter === "3"}
+                      >
+                        <AddCircleIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                 </CardActions>
               </Card>
             </Grid>
@@ -300,6 +360,16 @@ const Secciones: React.FC = () => {
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Avanzar">
+                    <span>
+                      <IconButton
+                        onClick={() => handleAdvance(seccion)}
+                        disabled={seccion.journey === "5" && seccion.quarter === "3"}
+                      >
+                        <AddCircleIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -368,6 +438,7 @@ const Secciones: React.FC = () => {
                       <MenuItem value={"3"}>Prosecución</MenuItem>
                       <MenuItem value={"4"}>3</MenuItem>
                       <MenuItem value={"5"}>4</MenuItem>
+                      <MenuItem value={"6"}>5</MenuItem>
                 </Select>
                 {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
               </FormControl>
