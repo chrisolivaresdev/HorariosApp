@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // Crea una instancia de Axios
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:3000/api', // Cambia esta URL por la base de tu API
+  baseURL: 'https://chris-back-horarios.onrender.com/api', // Cambia esta URL por la base de tu API
   headers: {
     'Content-Type': 'application/json',
   },
