@@ -171,6 +171,7 @@ const Asignaturas: React.FC = () => {
           text: 'Asignatura editada correctamente!.',
           icon: 'success',
         });
+        getSubjects()
       }).catch(error => {
         Swal.fire({
           title: '¡Error!',
@@ -179,7 +180,7 @@ const Asignaturas: React.FC = () => {
         });
         console.error('Error:', error);
       });
-      getSubjects()
+     
       } else {
         axiosInstance.post('/subjects', newAsignatura)
         .then(() => {

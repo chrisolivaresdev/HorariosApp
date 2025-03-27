@@ -73,16 +73,17 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
           axiosInstance.get(`http://localhost:3000/api/schedules/classroom/${aula.id}/period/${periodId}`),
           axiosInstance.get(`periods/${periodId}`),
         ])
-
-        const horarios = horarioResponse.data.schedules[0].classes.map((horario: any) => {
-          const formatTime = (isoString: string) => {
-            const date = new Date(isoString)
-            const hours = date.getUTCHours().toString().padStart(2, "0")
-            const minutes = date.getUTCMinutes().toString().padStart(2, "0")
-            return `${hours}:${minutes}`
-          }
-
-          return {
+  
+        const formatTime = (isoString: string) => {
+          const date = new Date(isoString)
+          const hours = date.getUTCHours().toString().padStart(2, "0")
+          const minutes = date.getUTCMinutes().toString().padStart(2, "0")
+          return `${hours}:${minutes}`
+        }
+  
+        // Recorremos todos los objetos dentro de `schedules` y sus `classes`
+        const horarios = horarioResponse.data.schedules.flatMap((schedule: any) =>
+          schedule.classes.map((horario: any) => ({
             id: horario.id.toString(),
             subjectName: horario.subject.name,
             sectionName: horario.section.name,
@@ -97,10 +98,11 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
             end_time: formatTime(horario.end_time),
             color: generarColorAleatorio(horario.subject.id.toString()),
             horasAsignadas: (new Date(horario.end_time).getTime() - new Date(horario.start_time).getTime()) / (1000 * 60 * 45), // Convertir minutos a horas de clase (45 minutos = 1 hora de clase)
-          }
-        })
-
+          }))
+        )
+  
         setClases(horarios)
+        console.log(horarios)
         setPeriodo(periodoResponse.data)
         Swal.fire({
           title: "¡Bien!",
@@ -124,7 +126,7 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
         console.error("Error al cargar el horario del aula:", error)
       }
     }
-
+  
     fetchHorario()
   }, [aula.id, periodId])
 

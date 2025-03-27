@@ -138,11 +138,11 @@ const Aulas: React.FC<AulasProps> = ({ periodId, aulas, setAula, isMobile }) => 
       })
       .catch((error) => {
         console.log(error)
-        Swal.fire({
-          title: "¡Error!",
-          text: "A ocurrido un error en el get.",
-          icon: "error",
-        })
+        // Swal.fire({
+        //   title: "¡Error!",
+        //   text: "A ocurrido un error en el get.",
+        //   icon: "error",
+        // })
         console.error("Error:", error)
       })
   }

@@ -347,7 +347,7 @@ const Secciones: React.FC = () => {
                 <TableRow key={seccion.id}>
                   <TableCell>{seccion.name}</TableCell>
                   <TableCell>{seccion.total_students}</TableCell>
-                  <TableCell>{seccion.journey}</TableCell>
+                  <TableCell>{seccion.journey == "0" ? "inicial" : seccion.journey == "3" ? "Prosecución" : seccion.journey}</TableCell>
                   <TableCell>{seccion.quarter}</TableCell>
                   <TableCell>
                     <Tooltip title="Editar">
@@ -423,44 +423,51 @@ const Secciones: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="dense" error={!!errors.journey}>
-                <InputLabel id="journey-label">Trayecto</InputLabel>
-                <Select
-                  labelId="journey-label"
-                  value={newSeccion.journey}
-                  onChange={(e) => {
-                    setNewSeccion({ ...newSeccion, journey: e.target.value as string })
-                    setErrors((prev) => ({ ...prev, journey: "" }))
-                  }}>
-                      <MenuItem value={"0"}>Inicial</MenuItem>
-                      <MenuItem value={"1"}>1</MenuItem>
-                      <MenuItem value={"2"}>2</MenuItem>
-                      <MenuItem value={"3"}>Prosecución</MenuItem>
-                      <MenuItem value={"4"}>3</MenuItem>
-                      <MenuItem value={"5"}>4</MenuItem>
-                      <MenuItem value={"6"}>5</MenuItem>
-                </Select>
-                {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
-              </FormControl>
+            <FormControl fullWidth margin="dense" error={!!errors.journey}>
+            <InputLabel id="journey-label">Trayecto</InputLabel>
+            <Select
+              labelId="journey-label"
+              value={newSeccion.journey}
+              onChange={(e) => {
+                const journeyValue = e.target.value as string;
+                let quarterValue = newSeccion.quarter;
+                if (journeyValue === "0" || journeyValue === "3") {
+                  quarterValue = "1";
+                }
+                setNewSeccion({ ...newSeccion, journey: journeyValue, quarter: quarterValue });
+                setErrors((prev) => ({ ...prev, journey: "", quarter: "" }));
+              }}
+            >
+              <MenuItem value={"0"}>Inicial</MenuItem>
+              <MenuItem value={"1"}>1</MenuItem>
+              <MenuItem value={"2"}>2</MenuItem>
+              <MenuItem value={"3"}>Prosecución</MenuItem>
+              <MenuItem value={"4"}>3</MenuItem>
+              <MenuItem value={"5"}>4</MenuItem>
+              <MenuItem value={"6"}>5</MenuItem>
+            </Select>
+            {errors.journey && <FormHelperText>{errors.journey}</FormHelperText>}
+          </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="dense" error={!!errors.quarter}>
-                <InputLabel id="quarter-label">Trimestre</InputLabel>
-                <Select
-                  labelId="quarter-label"
-                  value={newSeccion.quarter}
-                  onChange={(e) => {
-                    setNewSeccion({ ...newSeccion, quarter: e.target.value as string })
-                    setErrors((prev) => ({ ...prev, quarter: "" }))
-                  }}
-                >
-                    <MenuItem value={"1"}>1</MenuItem>
-                    <MenuItem value={"2"}>2</MenuItem>
-                    <MenuItem value={"3"}>3</MenuItem>
-                </Select>
-                {errors.quarter && <FormHelperText>{errors.quarter}</FormHelperText>}
-              </FormControl>
-            </Grid>
+            <FormControl fullWidth margin="dense" error={!!errors.quarter}>
+              <InputLabel id="quarter-label">Trimestre</InputLabel>
+              <Select
+                labelId="quarter-label"
+                value={newSeccion.quarter}
+                onChange={(e) => {
+                  setNewSeccion({ ...newSeccion, quarter: e.target.value as string });
+                  setErrors((prev) => ({ ...prev, quarter: "" }));
+                }}
+                disabled={newSeccion.journey === "0" || newSeccion.journey === "3"}
+              >
+                <MenuItem value={"1"}>1</MenuItem>
+                <MenuItem value={"2"}>2</MenuItem>
+                <MenuItem value={"3"}>3</MenuItem>
+              </Select>
+              {errors.quarter && <FormHelperText>{errors.quarter}</FormHelperText>}
+            </FormControl>
+          </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

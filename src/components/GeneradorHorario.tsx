@@ -43,6 +43,7 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import Swal from "sweetalert2"
 import axiosInstance from "../axios/axiosInstance"
+import PreviousScheduleModal from "./PreviousScheduleModal"
 
 interface Clase {
   id?: any | null
@@ -120,6 +121,8 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
   const [classroomWarning, setClassroomWarning] = useState<string | null>(null)
   const [classroomError, setClassroomError] = useState<string | null>(null)
   const [originalHorasExtras, setOriginalHorasExtras] = useState<HorasExtras | null>(null)
+  const [isPreviousScheduleModalOpen, setPreviousScheduleModalOpen] = useState(false);
+  const [previousSchedule, setPreviousSchedule] = useState(null);
 
   const horarioRef = useRef<HTMLDivElement>(null)
 
@@ -205,6 +208,18 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
         console.error("Error:", error)
       })
   }
+
+  const openPreviousScheduleModal = async () => {
+    try {
+      const response = await axiosInstance.get(`schedules/section/${seccionId}/last`);
+        const data = response.data;
+        setPreviousSchedule(data);
+        setPreviousScheduleModalOpen(true);
+    } catch (error) {
+      Swal.fire('Atento', 'Esa sección no tiene un horario en un periodo anterior', 'warning');
+      console.error("Error:", error);
+    }
+  };
 
   // Generar rangos de horas
   const horas: any = []
@@ -430,7 +445,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
     // Check overlap with extra hours
     if (horasExtras) {
       if (!horasExtras.classroomId) {
-        setWarningMessage("Debe seleccionar un classroomId para las horas extras.")
+        setWarningMessage("Debe seleccionar un aula para las horas extras.")
         setOpenWarning(true)
         return
       }
@@ -706,7 +721,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
       // Calcular tamaño óptimo para el PDF
       const pdfWidth = 210 // Ancho A4 en mm
       // const pdfHeight = 297 // Alto A4 en mm
-      const imgWidth = pdfWidth * 0.98 // Usar 98% del ancho
+      const imgWidth = pdfWidth * 0.9 // Usar 98% del ancho
       const imgHeight = (canvas.height * imgWidth) / canvas.width
 
       const pdf = new jsPDF({
@@ -817,7 +832,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
           text: "Creado exitosamente",
           icon: "success",
         })
-        handleCloseScheduleGenerator()
+        getHorario()
       })
       .catch((error) => {
         Swal.fire({
@@ -877,7 +892,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
           text: "Actualizado correctamente disponibles",
           icon: "success",
         })
-        handleCloseScheduleGenerator()
+        getHorario()
       })
       .catch((error) => {
         Swal.fire({
@@ -1201,6 +1216,17 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
         >
           Descargar PDF
         </Button>
+         
+        <Button variant="contained" color="primary" onClick={openPreviousScheduleModal} size="small">
+          Horario Anterior
+        </Button>
+        {isPreviousScheduleModalOpen && (
+          <PreviousScheduleModal
+            isOpen={isPreviousScheduleModalOpen}
+            onClose={() => setPreviousScheduleModalOpen(false)}
+            schedule={previousSchedule}
+          />
+        )}
         {!hasSchedule && (
           <Button
             variant="contained"
