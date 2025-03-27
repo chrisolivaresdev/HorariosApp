@@ -16,46 +16,48 @@ const Login = () => {
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    const data={
+    const data = {
       username,
-      password
-    } 
-    let ruta:string
-
-    if(username.toLowerCase() === "admin") {
-      ruta = '/auth/login/admin'
-    }else {
-      ruta = '/auth/login'
+      password,
     }
-
-    axiosInstance.post(ruta, data)
-  .then(response => {
-    localStorage.setItem('token', response.data.access_token)
-    localStorage.setItem('role', response.data.role)
-
-    if(localStorage.getItem('role') === 'ADMIN'){
-      navigate("/user-management")
-    }else {
-      navigate("/")
+    let ruta: string
+  
+    if (username.toLowerCase() === "admin") {
+      ruta = "/auth/login/admin"
+    } else {
+      ruta = "/auth/login"
     }
-    Swal.fire({
-      title: 'Bien!',
-      text: 'has iniciado sesion corectamente.',
-      icon: 'success',
-    });
-
-  })
-  .catch(error => {
-    Swal.fire({
-      title: '¡Error!',
-      text: 'Credenciales invalidas.',
-      icon: 'error',
-    });
-    console.error('Error:', error);
-  });
- 
+  
+    try {
+      const response = await axiosInstance.post(ruta, data)
+  
+      // Guardar token y rol en localStorage
+      localStorage.setItem("token", response.data.access_token)
+      localStorage.setItem("role", response.data.role)
+  
+      // Verificar el rol y redirigir
+      const role = response.data.role
+      if (role === "ADMIN") {
+        navigate("/user-management", { replace: true })
+      } else {
+        navigate("/", { replace: true })
+      }
+  
+      Swal.fire({
+        title: "¡Bien!",
+        text: "Has iniciado sesión correctamente.",
+        icon: "success",
+      })
+    } catch (error) {
+      Swal.fire({
+        title: "¡Error!",
+        text: "Credenciales inválidas.",
+        icon: "error",
+      })
+      console.error("Error:", error)
+    }
   }
 
   return (
