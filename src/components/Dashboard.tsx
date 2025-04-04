@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useContext } from "react"
+import { useState } from "react"
 import {
   AppBar,
   Toolbar,
@@ -13,7 +13,6 @@ import {
   ListItemText,
   Box,
   Container,
-  useTheme,
   Button,
   ListItemButton,
 } from "@mui/material"
@@ -22,8 +21,8 @@ import {
   Home,
   Book,
   Person,
-  Brightness4,
-  Brightness7,
+  // Brightness4,
+  // Brightness7,
   ExitToApp,
   SupervisorAccount,
 } from "@mui/icons-material"
@@ -34,7 +33,7 @@ import Asignaturas from "./Asignaturas"
 import Profesores from "./Profesores"
 import Carreras from "./Carreras"
 import UserManagement from "./UserManagement"
-import { ColorModeContext } from "../App"
+// import { ColorModeContext } from "../App"
 import Secciones from "./Secciones"
 
 
@@ -42,9 +41,9 @@ import Secciones from "./Secciones"
 const Dashboard = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
-  const theme = useTheme()
+  // const theme = useTheme()
   // const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
-  const colorMode = useContext(ColorModeContext)
+  // const colorMode = useContext(ColorModeContext)
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen)
