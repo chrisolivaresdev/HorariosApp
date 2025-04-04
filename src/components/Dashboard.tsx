@@ -79,9 +79,9 @@ const Dashboard = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Sistema de Horarios Universitarios
           </Typography>
-          <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
+          {/* <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
             {theme.palette.mode === "dark" ? <Brightness7 /> : <Brightness4 />}
-          </IconButton>
+          </IconButton> */}
           <Button color="inherit" onClick={handleLogout} startIcon={<ExitToApp />}>
             Cerrar Sesión
           </Button>
