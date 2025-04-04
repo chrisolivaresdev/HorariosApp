@@ -223,34 +223,40 @@ const Secciones: React.FC = () => {
   }
   
   const handleAdvance = (seccion: Seccion) => {
-    let newJourney = seccion.journey
-    let newQuarter = seccion.quarter
+    let newJourney = parseInt(seccion.journey); // Convertir a número
+    let newQuarter = parseInt(seccion.quarter); // Convertir a número
   
-    if (newQuarter > "3") {
-      newQuarter = "1"
-      newJourney = (parseInt(seccion.journey) + 1).toString()
+    if (newQuarter >= 3) {
+      newQuarter = 1;
+      newJourney += 1;
+    } else  if (newJourney >= 0) {
+      newQuarter = 1;
+      newJourney += 1;
+    } else {
+      newQuarter += 1;
     }
   
-    if (newJourney > "5") {
+    if (newJourney > 5) {
       Swal.fire({
         title: "¡Error!",
         text: "No se puede avanzar más allá del trayecto 5 trimestre 3.",
         icon: "error",
-      })
-      return
-    }
-    if (newJourney === "0" && newQuarter === "1") {
-      newJourney = "1"
-      newQuarter = "1"
-    }
-
-    const updatedSeccion: any = {
-      ...seccion,
-      journey: newJourney,
-      quarter: newQuarter,
+      });
+      return;
     }
   
-    const { id, userId, createdAt, updatedAt, deletedAt, classes, ...seccionData } = updatedSeccion
+    if (newJourney === 0 && newQuarter === 1) {
+      newJourney = 1;
+      newQuarter = 1;
+    }
+  
+    const updatedSeccion: any = {
+      ...seccion,
+      journey: newJourney.toString(), // Convertir de nuevo a cadena
+      quarter: newQuarter.toString(), // Convertir de nuevo a cadena
+    };
+  
+    const { id, userId, createdAt, updatedAt, deletedAt, classes, ...seccionData } = updatedSeccion;
   
     axiosInstance
       .patch(`sections/${seccion.id}`, seccionData)
@@ -259,18 +265,18 @@ const Secciones: React.FC = () => {
           title: "¡Bien!",
           text: "Sección avanzada correctamente.",
           icon: "success",
-        })
-        getSecciones()
+        });
+        getSecciones();
       })
       .catch((error) => {
         Swal.fire({
           title: "¡Error!",
           text: "Ha ocurrido un error al avanzar la sección.",
           icon: "error",
-        })
-        console.error("Error:", error)
-      })
-  }
+        });
+        console.error("Error:", error);
+      });
+  };
 
   return (
     <>
