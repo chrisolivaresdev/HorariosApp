@@ -7,12 +7,26 @@ import { useState, useMemo, createContext } from "react"
 import { AnimatePresence } from "framer-motion"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
-import './App.css'
+import "./App.css"
 
+// Contexto para el modo de color
 export const ColorModeContext = createContext({ toggleColorMode: () => {} })
 
-function App() {
+// Constantes para las rutas
+const ROUTES = {
+  LOGIN: "/login",
+  DASHBOARD: "/",
+}
 
+// Función para verificar si el usuario está autenticado
+const isAuthenticated = () => !!localStorage.getItem("token")
+
+// Componente para rutas protegidas
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  return isAuthenticated() ? children : <Navigate to={ROUTES.LOGIN} replace />
+}
+
+function App() {
   const [mode, setMode] = useState<"light" | "dark">("light")
 
   const colorMode = useMemo(
@@ -21,7 +35,7 @@ function App() {
         setMode((prevMode) => (prevMode === "light" ? "dark" : "light"))
       },
     }),
-    [],
+    []
   )
 
   const theme = useMemo(
@@ -97,38 +111,34 @@ function App() {
           },
         },
       }),
-    [mode],
+    [mode]
   )
 
-
   return (
-      <ColorModeContext.Provider value={colorMode}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Router>
-            <AnimatePresence mode="wait">
-              <Routes>
-                <Route
-                  path="/login"
-                  element={<Login/>}
-                />
-                <Route
-                  path="/*"
-                  element={
-                    localStorage.getItem('token') ? (
-                      <Dashboard />
-                    ) : (
-                      <Navigate to="/login" replace />
-                    )
-                  }
-                />
-              </Routes>
-            </AnimatePresence>
-          </Router>
-        </ThemeProvider>
-      </ColorModeContext.Provider>
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <AnimatePresence mode="wait">
+            <Routes>
+              {/* Ruta pública */}
+              <Route path={ROUTES.LOGIN} element={<Login />} />
+
+              {/* Ruta protegida */}
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </AnimatePresence>
+        </Router>
+      </ThemeProvider>
+    </ColorModeContext.Provider>
   )
 }
 
 export default App
-
