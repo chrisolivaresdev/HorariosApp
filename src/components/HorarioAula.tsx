@@ -70,7 +70,7 @@ const HorarioAula: React.FC<HorarioAulaProps> = ({ aula, periodId }) => {
     const fetchHorario = async () => {
       try {
         const [horarioResponse, periodoResponse] = await Promise.all([
-          axiosInstance.get(`http://localhost:3000/api/schedules/classroom/${aula.id}/period/${periodId}`),
+          axiosInstance.get(`/schedules/classroom/${aula.id}/period/${periodId}`),
           axiosInstance.get(`periods/${periodId}`),
         ])
   
