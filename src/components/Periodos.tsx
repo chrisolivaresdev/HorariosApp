@@ -400,7 +400,7 @@ const Periodos: React.FC = () => {
                       >
                         {secciones.map((seccion) => (
                           <MenuItem key={seccion.id} value={seccion.id}>
-                            {seccion.name} - Trayecto {seccion.journey === "0" ? "Inicial" : seccion.journey} -
+                            {seccion.name} - Trayecto {seccion.journey === "0" ? "Inicial" : seccion.journey === "3" ? "Prosecución" : seccion.journey === "4" ? "3" : seccion.journey === "5" ? "4" : seccion.journey === "6" ? "5" : seccion.journey} -
                             Trimestre {seccion.quarter} - estudiantes {seccion.total_students}
                           </MenuItem>
                         ))}

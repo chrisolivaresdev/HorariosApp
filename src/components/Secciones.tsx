@@ -229,14 +229,14 @@ const Secciones: React.FC = () => {
     if (newQuarter >= 3) {
       newQuarter = 1;
       newJourney += 1;
-    } else  if (newJourney >= 0) {
+    } else  if (newJourney == 0) {
       newQuarter = 1;
       newJourney += 1;
     } else {
       newQuarter += 1;
     }
   
-    if (newJourney > 5) {
+    if (newJourney > 6) {
       Swal.fire({
         title: "¡Error!",
         text: "No se puede avanzar más allá del trayecto 5 trimestre 3.",
@@ -307,7 +307,7 @@ const Secciones: React.FC = () => {
                 <CardContent>
                   <Typography variant="h6">{seccion.name}</Typography>
                   <Typography variant="body2">Estudiantes: {seccion.total_students}</Typography>
-                  <Typography variant="body2">Trayecto: {seccion.journey}</Typography>
+                  <Typography variant="body2">Trayecto: {seccion.journey === "0" ? "Inicial" : seccion.journey === "3" ? "Prosecución" : seccion.journey === "4" ? "3" : seccion.journey === "5" ? "4" : seccion.journey === "6" ? "5" : seccion.journey}</Typography>
                   <Typography variant="body2">Trimestre: {seccion.quarter}</Typography>
                 </CardContent>
                 <CardActions>
@@ -325,7 +325,7 @@ const Secciones: React.FC = () => {
                     <span>
                       <IconButton
                         onClick={() => handleAdvance(seccion)}
-                        disabled={seccion.journey === "5" && seccion.quarter === "3"}
+                        disabled={seccion.journey === "6" && seccion.quarter === "3"}
                       >
                         <AddCircleIcon />
                       </IconButton>
@@ -353,7 +353,7 @@ const Secciones: React.FC = () => {
                 <TableRow key={seccion.id}>
                   <TableCell>{seccion.name}</TableCell>
                   <TableCell>{seccion.total_students}</TableCell>
-                  <TableCell>{seccion.journey == "0" ? "inicial" : seccion.journey == "3" ? "Prosecución" : seccion.journey}</TableCell>
+                  <TableCell>{seccion.journey === "0" ? "Inicial" : seccion.journey === "3" ? "Prosecución" : seccion.journey === "4" ? "3" : seccion.journey === "5" ? "4" : seccion.journey === "6" ? "5" : seccion.journey}</TableCell>
                   <TableCell>{seccion.quarter}</TableCell>
                   <TableCell>
                     <Tooltip title="Editar">
@@ -370,7 +370,7 @@ const Secciones: React.FC = () => {
                     <span>
                       <IconButton
                         onClick={() => handleAdvance(seccion)}
-                        disabled={seccion.journey === "5" && seccion.quarter === "3"}
+                        disabled={seccion.journey === "6" && seccion.quarter === "3"}
                       >
                         <AddCircleIcon />
                       </IconButton>
@@ -437,7 +437,7 @@ const Secciones: React.FC = () => {
               onChange={(e) => {
                 const journeyValue = e.target.value as string;
                 let quarterValue = newSeccion.quarter;
-                if (journeyValue === "0" || journeyValue === "3") {
+                if (journeyValue === "0" ) {
                   quarterValue = "1";
                 }
                 setNewSeccion({ ...newSeccion, journey: journeyValue, quarter: quarterValue });
@@ -465,7 +465,7 @@ const Secciones: React.FC = () => {
                   setNewSeccion({ ...newSeccion, quarter: e.target.value as string });
                   setErrors((prev) => ({ ...prev, quarter: "" }));
                 }}
-                disabled={newSeccion.journey === "0" || newSeccion.journey === "3"}
+                disabled={newSeccion.journey === "0"}
               >
                 <MenuItem value={"1"}>1</MenuItem>
                 <MenuItem value={"2"}>2</MenuItem>

@@ -300,7 +300,7 @@ const Asignaturas: React.FC = () => {
                   <Typography variant="body2">Tipo: {asignatura.subject_type}</Typography>
                   <Typography variant="body2">Duración: {asignatura.duration}</Typography>
                   <Typography variant="body2">
-                    journey: {asignatura.journey === "0" ? "Inicial" : asignatura.journey}
+                    journey: {asignatura.journey === "0" ? "Inicial" : asignatura.journey === "3" ? "Prosecución" : asignatura.journey === "4" ? "3" : asignatura.journey === "5" ? "4" : asignatura.journey === "6" ? "5" : asignatura.journey}
                   </Typography>
                   <Typography variant="body2">
                     quarters: {asignatura.quarters.map((t) => `${t}`).join(", ")}
@@ -343,7 +343,7 @@ const Asignaturas: React.FC = () => {
                   <TableCell>{asignatura.name}</TableCell>
                   <TableCell>{asignatura.subject_type == "THEORETICAL" ? "Teórica" : asignatura.subject_type == "PRACTICAL" ? "Practica" : asignatura.subject_type == "THEORETICAL_PRACTICAL" ? "Teorica practica" : ""}</TableCell>
                   <TableCell>{asignatura.duration}</TableCell>
-                  <TableCell>{asignatura.journey === "0" ? "Inicial" : asignatura.journey}</TableCell>
+                  <TableCell>{asignatura.journey === "0" ? "Inicial" : asignatura.journey === "3" ? "Prosecución" : asignatura.journey === "4" ? "3" : asignatura.journey === "5" ? "4" : asignatura.journey === "6" ? "5" : asignatura.journey}</TableCell>
                   <TableCell>{asignatura.quarters.map((t) => `${t}`).join(", ")}</TableCell>
                   <TableCell>{asignatura.weekly_hours}</TableCell>
                   <TableCell>

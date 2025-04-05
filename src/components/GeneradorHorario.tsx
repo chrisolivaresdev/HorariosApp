@@ -1071,7 +1071,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
 
   const obtenerDisponibilidadProfesor = async (teacherId: string) => {
     try {
-      const response = await axiosInstance.get(`http://localhost:3000/api/teachers/${teacherId}/available-slots`, {
+      const response = await axiosInstance.get(`/teachers/${teacherId}/available-slots`, {
         params: {
           periodId: periodId, 
         },
@@ -1136,7 +1136,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
 
   const obtenerDisponibilidadAula = async (classroomId: string) => {
     try {
-      const response = await axiosInstance.get(`http://localhost:3000/api/classrooms/${classroomId}/available-slots`)
+      const response = await axiosInstance.get(`/classrooms/${classroomId}/available-slots`)
 
       const disponibilidad = response.data.reduce((acc: any, schedule: any) => {
         const day = schedule.dayOfWeek
@@ -1246,7 +1246,7 @@ const GeneradorHorario: React.FC<GeneradorHorarioProps> = ({
             {selectedSeccion?.nombreSeccion}
           </Typography>
           <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
-            Trayecto {selectedSeccion?.trayecto === 0 ? "Inicial" : selectedSeccion?.trayecto} - Trimestre{" "}
+            Trayecto {selectedSeccion.trayecto === "0" ? "Inicial" : selectedSeccion.trayecto === "3" ? "Prosecución" : selectedSeccion.trayecto === "4" ? "3" : selectedSeccion.trayecto === "5" ? "4" : selectedSeccion.trayecto === "6" ? "5" : selectedSeccion.trayecto} - Trimestre{" "}
             {selectedSeccion?.trimestre}
           </Typography>
         </Box>
