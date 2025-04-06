@@ -1,8 +1,5 @@
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
-
-const navigate = useNavigate()
 // Crea una instancia de Axios
 const axiosInstance = axios.create({
   baseURL: 'https://chris-back-horarios.onrender.com/api', // Cambia esta URL por la base de tu API
@@ -33,13 +30,15 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Redirige al usuario al login
-      localStorage.removeItem("token")
-      localStorage.removeItem("role")
-       navigate("/login")
-      // window.location.href = '/login'; // Cambia esta ruta por la del login en tu aplicación
+      // Emitir un evento personalizado para redirigir al login
+      const event = new CustomEvent('unauthorized', { detail: 'Usuario no autorizado' });
+      window.dispatchEvent(event);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
     }
     return Promise.reject(error);
-  })
+  }
+);
 
 export default axiosInstance;

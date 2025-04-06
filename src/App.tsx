@@ -1,10 +1,11 @@
 "use client"
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { useState, useMemo, createContext } from "react"
+import { useState, useMemo, createContext, useEffect } from "react"
 import { AnimatePresence } from "framer-motion"
+import Swal from "sweetalert2"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
 import "./App.css"
@@ -119,6 +120,7 @@ function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
+          <RedirectHandler />
           <AnimatePresence mode="wait">
             <Routes>
               {/* Ruta pública */}
@@ -139,6 +141,32 @@ function App() {
       </ThemeProvider>
     </ColorModeContext.Provider>
   )
+}
+
+// Componente para manejar redirecciones basadas en eventos
+const RedirectHandler = () => {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      Swal.fire({
+        title: "Sesión vencida",
+        text: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+        icon: "warning",
+        confirmButtonText: "Aceptar",
+      }).then(() => {
+        navigate(ROUTES.LOGIN) // Redirige al login después de cerrar el Swal
+      })
+    }
+
+    window.addEventListener("unauthorized", handleUnauthorized)
+
+    return () => {
+      window.removeEventListener("unauthorized", handleUnauthorized)
+    }
+  }, [navigate])
+
+  return null // Este componente no renderiza nada
 }
 
 export default App
