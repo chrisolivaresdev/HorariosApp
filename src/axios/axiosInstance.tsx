@@ -36,6 +36,9 @@ axiosInstance.interceptors.response.use(
 
       localStorage.removeItem("token");
       localStorage.removeItem("role");
+
+      // Retornar una respuesta controlada para evitar que caiga en el catch
+      return Promise.resolve({ data: null, status: 401 });
     }
     return Promise.reject(error);
   }
